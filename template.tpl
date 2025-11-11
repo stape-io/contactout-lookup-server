@@ -33,7 +33,7 @@ ___TEMPLATE_PARAMETERS___
       {
         "type": "SELECT",
         "name": "apiSelection",
-        "displayName": "Choose API",
+        "displayName": "Choose Contactout API",
         "macrosInSelect": false,
         "selectItems": [
           {
@@ -49,7 +49,24 @@ ___TEMPLATE_PARAMETERS___
             "displayValue": "Email Verifier"
           }
         ],
-        "simpleValueType": true
+        "simpleValueType": true,
+        "valueValidators": [
+          {
+            "type": "NON_EMPTY"
+          }
+        ],
+        "help": "You can find all Contactout APIs references \u003ca href\u003d\"https://api.contactout.com/\"\u003e here \u003c/a\u003e. Bear in mind that not all of them are currently supported here."
+      },
+      {
+        "type": "TEXT",
+        "name": "apiKey",
+        "displayName": "API Key",
+        "simpleValueType": true,
+        "valueValidators": [
+          {
+            "type": "NON_EMPTY"
+          }
+        ]
       },
       {
         "type": "CHECKBOX",
@@ -60,6 +77,216 @@ ___TEMPLATE_PARAMETERS___
         "subParams": []
       }
     ]
+  },
+  {
+    "type": "GROUP",
+    "name": "contactInfoSingleAPIGroup",
+    "displayName": "Contact Info Single Lookup Configuration",
+    "groupStyle": "NO_ZIPPY",
+    "subParams": [],
+    "enablingConditions": [
+      {
+        "paramName": "apiSelection",
+        "paramValue": "contactInfoSingle",
+        "type": "EQUALS"
+      }
+    ]
+  },
+  {
+    "type": "GROUP",
+    "name": "peopleEnrichAPIGroup",
+    "displayName": "People Enrich API",
+    "groupStyle": "NO_ZIPPY",
+    "subParams": [
+      {
+        "type": "SIMPLE_TABLE",
+        "name": "peopleEnrichPrimaryParameters",
+        "displayName": "",
+        "simpleTableColumns": [
+          {
+            "defaultValue": "",
+            "displayName": "Primary Parameters",
+            "name": "key",
+            "type": "SELECT",
+            "selectItems": [
+              {
+                "value": "linkedinUrl",
+                "displayValue": "Linkedin Profile URL"
+              },
+              {
+                "value": "email",
+                "displayValue": "Email Address"
+              },
+              {
+                "value": "phone",
+                "displayValue": "Phone Number"
+              }
+            ],
+            "valueValidators": [
+              {
+                "type": "NON_EMPTY"
+              }
+            ],
+            "isUnique": true
+          },
+          {
+            "defaultValue": "",
+            "displayName": "Value",
+            "name": "value",
+            "type": "TEXT",
+            "valueValidators": [
+              {
+                "type": "NON_EMPTY"
+              }
+            ]
+          }
+        ],
+        "newRowButtonText": "Add Parameter",
+        "valueValidators": []
+      },
+      {
+        "type": "SIMPLE_TABLE",
+        "name": "peopleEnrichNameParameters",
+        "displayName": "Help",
+        "simpleTableColumns": [
+          {
+            "defaultValue": "",
+            "displayName": "Name Parameters",
+            "name": "key",
+            "type": "SELECT",
+            "selectItems": [
+              {
+                "value": "fullname",
+                "displayValue": "Full Name"
+              },
+              {
+                "value": "firstname",
+                "displayValue": "First Name"
+              },
+              {
+                "value": "phone",
+                "displayValue": "lastname"
+              }
+            ],
+            "valueValidators": [
+              {
+                "type": "NON_EMPTY"
+              }
+            ],
+            "isUnique": true
+          },
+          {
+            "defaultValue": "",
+            "displayName": "Value",
+            "name": "value",
+            "type": "TEXT",
+            "valueValidators": [
+              {
+                "type": "NON_EMPTY"
+              }
+            ],
+            "valueHint": ""
+          }
+        ],
+        "newRowButtonText": "Add Parameter",
+        "help": "If setting either \u003cb\u003eFirst Name\u003c/b\u003e or \u003cb\u003e Last Name \u003c/b\u003e, both must be set, otherwise it will be discarded on lookup filtering."
+      },
+      {
+        "type": "SIMPLE_TABLE",
+        "name": "peopleEnrichSecondaryParameters",
+        "displayName": "",
+        "simpleTableColumns": [
+          {
+            "defaultValue": "",
+            "displayName": "Secondary Paremeters",
+            "name": "key",
+            "type": "SELECT",
+            "selectItems": [
+              {
+                "value": "company",
+                "displayValue": "Company"
+              },
+              {
+                "value": "companyDomains",
+                "displayValue": "Company Domain"
+              },
+              {
+                "value": "education",
+                "displayValue": "Education"
+              },
+              {
+                "value": "location",
+                "displayValue": "Location"
+              },
+              {
+                "value": "jobTitle",
+                "displayValue": "Job Title"
+              }
+            ],
+            "valueValidators": [
+              {
+                "type": "NON_EMPTY"
+              }
+            ],
+            "isUnique": true
+          },
+          {
+            "defaultValue": "",
+            "displayName": "Value",
+            "name": "value",
+            "type": "TEXT",
+            "valueValidators": [
+              {
+                "type": "NON_EMPTY"
+              }
+            ]
+          }
+        ],
+        "newRowButtonText": "Add Parameter"
+      },
+      {
+        "type": "SIMPLE_TABLE",
+        "name": "peopleEnrichIncludeParameters",
+        "displayName": "",
+        "simpleTableColumns": [
+          {
+            "defaultValue": "",
+            "displayName": "Data to be included on response",
+            "name": "key",
+            "type": "SELECT",
+            "selectItems": [
+              {
+                "value": "workEmail",
+                "displayValue": "Work Email"
+              },
+              {
+                "value": "personalEmail",
+                "displayValue": "Personal Email"
+              },
+              {
+                "value": "phone",
+                "displayValue": "Phone"
+              }
+            ],
+            "valueValidators": [
+              {
+                "type": "NON_EMPTY"
+              }
+            ],
+            "isUnique": true
+          }
+        ],
+        "newRowButtonText": "Add Parameter"
+      }
+    ],
+    "enablingConditions": [
+      {
+        "paramName": "apiSelection",
+        "paramValue": "peopleEnrich",
+        "type": "EQUALS"
+      }
+    ],
+    "help": "Returns a user data object as described in the \u003ca href\u003d\"https://api.contactout.com/#people-enrich-request-parameters\"\u003e documentation \u003c/a\u003e.\u003c/br\u003e \nIn order to return a match, is required:\u003cbr\u003e\n\u003cul\u003e \n\u003cli\u003e One primary identifier (Linkedin URL, Email or Phone)\u003c/li\u003e\n\u003cb\u003eOR\u003c/b\u003e\n\u003cli\u003e A combination of \u003cb\u003eName\u003c/b\u003e and at least a secondary parameter (Company, Location, Education, etc.)\u003c/li\u003e\u003cbr\u003e\n\u003c/ul\u003e\nObs: A \u003cb\u003eName\u003c/b\u003e must be either a Full Name or a combination of First Name and Last Name."
   },
   {
     "displayName": "Logs Settings",
@@ -181,11 +408,9 @@ const sha256Sync = require('sha256Sync');
 const eventData = getAllEventData();
 const useOptimisticScenario = data.useOptimisticScenario;
 const url = eventData.page_location || getRequestHeader('referer');
-const requestConfig = {};
 const postBody = {};
 const queries = [];
-
-
+let requestConfig = {};
 
 if (!isConsentGivenOrNotRequired(data, eventData)) {
   return data.gtmOnSuccess();
@@ -201,7 +426,6 @@ if (useOptimisticScenario) {
   return data.gtmOnSuccess();
 }
 
-
 /*==============================================================================
   Vendor Related Functions
 ==============================================================================*/
@@ -209,22 +433,17 @@ if (useOptimisticScenario) {
 function normalizePhoneNumber(phoneNumber) {
   if (!phoneNumber) return phoneNumber;
 
-  phoneNumber = phoneNumber
-    .split(' ').join('')
-    .split('-').join('')
-    .split('(').join('')
-    .split(')').join('');
-  
+  phoneNumber = phoneNumber.split(' ').join('').split('-').join('').split('(').join('').split(')').join('');
+
   if (phoneNumber[0] !== '+') phoneNumber = '+' + phoneNumber;
   return phoneNumber;
 }
 
-function sendRequest(requestConfig, postBody , queries) {
-
+function sendRequest(requestConfig, postBody, queries) {
   log({
     Name: 'ContactoutLookup',
     Type: 'Request',
-    EventName: 'API_'+ requestConfig.apiName.toUpperCase() +'_LOOKUP',
+    EventName: 'API_' + requestConfig.apiName.toUpperCase() + '_LOOKUP',
     RequestMethod: 'POST',
     RequestUrl: requestConfig.url,
     RequestBody: postBody
@@ -236,7 +455,7 @@ function sendRequest(requestConfig, postBody , queries) {
       log({
         Name: 'ContactoutLookup',
         Type: 'Response',
-        EventName: 'API_'+ requestConfig.apiName.toUpperCase() +'_LOOKUP',
+        EventName: 'API_' + requestConfig.apiName.toUpperCase() + '_LOOKUP',
         ResponseStatusCode: result.statusCode,
         ResponseHeaders: result.headers,
         ResponseBody: result.body
@@ -254,7 +473,7 @@ function sendRequest(requestConfig, postBody , queries) {
       log({
         Name: 'ContactoutLookup',
         Type: 'Message',
-        EventName: 'API_'+ requestConfig.apiName.toUpperCase() +'_LOOKUP',
+        EventName: 'API_' + requestConfig.apiName.toUpperCase() + '_LOOKUP',
         Message: 'Request failed or timed out.',
         Reason: JSON.stringify(result)
       });
@@ -536,6 +755,6 @@ scenarios: []
 
 ___NOTES___
 
-Created on 11/11/2025, 14:01:12
+Created on 11/11/2025, 15:04:03
 
 

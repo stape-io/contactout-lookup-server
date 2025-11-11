@@ -18,9 +18,9 @@ const sha256Sync = require('sha256Sync');
 const eventData = getAllEventData();
 const useOptimisticScenario = data.useOptimisticScenario;
 const url = eventData.page_location || getRequestHeader('referer');
-const requestConfig = {};
 const postBody = {};
 const queries = [];
+let requestConfig = {};
 
 if (!isConsentGivenOrNotRequired(data, eventData)) {
   return data.gtmOnSuccess();
