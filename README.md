@@ -60,14 +60,6 @@ This template requires the following permissions:
 
 ---
 
-### Summary of Template Logic
-
-- **Caching Mechanism**: The template uses `sha256Sync` to create a cache key based on the API selection and request body. If a valid cached response exists within the expiration time (default 12 hours), it is returned immediately without triggering an API call.
-- **Data Handling**: The variable can return a raw JSON string, or it can parse the response to return specific keys. It handles both flat and nested object creation based on user selection.
-- **Error Handling**: Failed requests or timeouts are logged to the console if logging is enabled, returning `undefined` to the variable.
-
-Would you like me to assist you in generating a test case JSON file for this template to ensure the caching logic works as expected?
-
 ## Open Source
 
 The **Contactout Lookup Variable by Stape** is developed and maintained by the [Stape Team](https://stape.io/) under the Apache 2.0 license.
