@@ -1,5 +1,4 @@
 const BigQuery = require('BigQuery');
-const encodeUriComponent = require('encodeUriComponent');
 const getAllEventData = require('getAllEventData');
 const getContainerVersion = require('getContainerVersion');
 const getRequestHeader = require('getRequestHeader');
@@ -8,147 +7,291 @@ const getType = require('getType');
 const JSON = require('JSON');
 const logToConsole = require('logToConsole');
 const makeString = require('makeString');
+const makeTableMap = require('makeTableMap');
 const Object = require('Object');
 const sendHttpRequest = require('sendHttpRequest');
 const sha256Sync = require('sha256Sync');
+const Promise = require('Promise');
+const templateDataStorage = require('templateDataStorage');
+const makeInteger = require('makeInteger');
 
 /*==============================================================================
+  MAIN EXECUTION
 ==============================================================================*/
 
 const eventData = getAllEventData();
-const useOptimisticScenario = data.useOptimisticScenario;
-const url = eventData.page_location || getRequestHeader('referer');
-const postBody = {};
-const queries = [];
-let requestConfig = {};
+const apiMethodsMapping = {
+  PeopleEnrich: peopleEnrichHandler,
+  ContactInfoSingle: contactInfoSingleHandler,
+  EmailVerifier: emailVerifierHandler
+};
 
-if (!isConsentGivenOrNotRequired(data, eventData)) {
-  return data.gtmOnSuccess();
-}
+if (handleGuardClauses(eventData)) return; //Early return
 
-if (url && url.lastIndexOf('https://gtm-msr.appspot.com/', 0) === 0) {
-  return data.gtmOnSuccess();
-}
+const requestBody = handleRequestBody(data, eventData);
+const requestConfig = handleRequestConfig(data, eventData);
 
-sendRequest(requestConfig, postBody, queries);
-
-if (useOptimisticScenario) {
-  return data.gtmOnSuccess();
-}
+return sendRequest(requestConfig, requestBody);
 
 /*==============================================================================
-  Vendor Related Functions
+ VENDOR RELATED FUNCTIONS
 ==============================================================================*/
 
-function normalizePhoneNumber(phoneNumber) {
-  if (!phoneNumber) return phoneNumber;
+function sendRequest(requestConfig, requestBody) {
+  const chosenApi = data.apiSelection;
+  const cacheKey = sha256Sync('contactout_' + chosenApi + '_' + JSON.stringify(requestBody));
+  const cacheKeyTimestamp = cacheKey + '_timestamp';
+  const cacheExpirationTimeMillis = data.expirationTime && makeInteger(data.expirationTime) * 60 * 60 * 1000;
+  const now = getTimestampMillis();
+  const keysToReturn = data.outputKeys ? data.outputKeysList.split(',') : 'fullObject';
+  let returnBody = {};
 
-  phoneNumber = phoneNumber.split(' ').join('').split('-').join('').split('(').join('').split(')').join('');
+  if (data.storeResponse) {
+    let cachedValues = templateDataStorage.getItemCopy(cacheKey);
+    const cachedValueTimestamp = templateDataStorage.getItemCopy(cacheKeyTimestamp);
+    if (data.expirationTime) {
+      if (cachedValueTimestamp && now - makeInteger(cachedValueTimestamp) >= cacheExpirationTimeMillis) {
+        cachedValues = '';
+        templateDataStorage.removeItem(cacheKey);
+        templateDataStorage.removeItem(cacheKeyTimestamp);
+      }
+    }
+    if (cachedValues) return Promise.create((resolve) => resolve(cachedValues));
+  }
 
-  if (phoneNumber[0] !== '+') phoneNumber = '+' + phoneNumber;
-  return phoneNumber;
-}
-
-function sendRequest(requestConfig, postBody, queries) {
   log({
     Name: 'ContactoutLookup',
     Type: 'Request',
-    EventName: 'API_' + requestConfig.apiName.toUpperCase() + '_LOOKUP',
-    RequestMethod: 'POST',
+    EventName: requestConfig.apiName + 'Api_' + 'Lookup',
+    RequestMethod: requestConfig.options.method,
     RequestUrl: requestConfig.url,
-    RequestBody: postBody
+    RequestBody: requestBody
   });
 
-  return sendHttpRequest(requestConfig.url, requestConfig.options, JSON.stringify(postBody))
+  return sendHttpRequest(requestConfig.url, requestConfig.options, JSON.stringify(requestBody))
     .then((result) => {
-      // .then has to be used when the Authorization header is in use
       log({
         Name: 'ContactoutLookup',
         Type: 'Response',
-        EventName: 'API_' + requestConfig.apiName.toUpperCase() + '_LOOKUP',
+        EventName: requestConfig.apiName + 'Api_' + 'Lookup',
         ResponseStatusCode: result.statusCode,
         ResponseHeaders: result.headers,
         ResponseBody: result.body
       });
 
-      if (!useOptimisticScenario) {
-        if (result.statusCode >= 200 && result.statusCode < 400) {
-          data.gtmOnSuccess();
-        } else {
-          data.gtmOnFailure();
+      if (makeString(result.statusCode) === '200' && result.body) {
+        if (data.storeResponse) {
+          log(result.body);
+          templateDataStorage.setItemCopy(cacheKey, result.body);
+          templateDataStorage.setItemCopy(cacheKeyTimestamp, now);
         }
+
+        return createReturningObject(result.body, keysToReturn);
       }
     })
     .catch((result) => {
       log({
         Name: 'ContactoutLookup',
         Type: 'Message',
-        EventName: 'API_' + requestConfig.apiName.toUpperCase() + '_LOOKUP',
+        EventName: requestConfig.apiName + 'Api_' + 'Lookup',
         Message: 'Request failed or timed out.',
         Reason: JSON.stringify(result)
       });
-
-      if (!useOptimisticScenario) data.gtmOnFailure();
+      return;
     });
 }
 
+function createReturningObject(sourceObject, keysToReturn) {
+  let returnObject = {};
+  const isSingleKey = getType(keysToReturn) === 'array' && keysToReturn.length === 1;
+
+  if (data.apiSelection === 'email_verifier') {
+    return JSON.parse(sourceObject).data.status;
+  }
+
+  if (keysToReturn === 'fullObject') {
+    return JSON.parse(sourceObject);
+  }
+
+  if (getType(keysToReturn) === 'array' && keysToReturn.length) {
+    keysToReturn = keysToReturn.map((key) => key.trim());
+    keysToReturn.forEach((keyPath) => {
+      const splitKeyPath = keyPath.split('.');
+      const lastKeyPathNamespace = splitKeyPath[splitKeyPath.length - 1].match('^[0-9]*$') ? splitKeyPath[splitKeyPath.length - 2] : splitKeyPath[splitKeyPath.length - 1];
+
+      if (data.objectOutput === 'createFlatObject') {
+        returnObject[lastKeyPathNamespace] = extractKeyFromObject(keyPath, JSON.parse(sourceObject));
+      }
+
+      if (data.objectOutput === 'createNestedObject') {
+        returnObject = createNestedObject(returnObject, keyPath, extractKeyFromObject(keyPath, JSON.parse(sourceObject)));
+      }
+    });
+  }
+  return isSingleKey ? extractKeyFromObject(keysToReturn[0], JSON.parse(sourceObject)) : returnObject;
+}
+
+function handleRequestBody(data, eventData) {
+  return apiMethodsMapping[data.apiSelection]('body', eventData);
+}
+
+function handleRequestConfig(data, eventData) {
+  const apiBaseUrl = 'https://api.contactout.com/';
+  const apiVersion = 'v1';
+  const apiPath = apiMethodsMapping[data.apiSelection]('path');
+  const apiQueries = apiMethodsMapping[data.apiSelection]('queries');
+  const apiNameMapping = {
+    PeopleEnrich: 'PEOPLE_ENRICH',
+    ContactInfoSingle: 'CONTACT_INFO_SINGLE',
+    EmailVerifier: 'EMAIL_VERIFIER'
+  };
+  const requestConfig = {
+    apiName: apiNameMapping[data.apiSelection],
+    url: apiBaseUrl + apiVersion + apiPath + apiQueries,
+    options: {
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+        token: data.apiKey
+      },
+      method: apiMethodsMapping[data.apiSelection]('requestMethod'),
+      timeout: 15000
+    }
+  };
+  return requestConfig;
+}
+
+function peopleEnrichHandler(method) {
+  if (method === 'requestMethod') return 'POST';
+  if (method === 'path') return '/people/enrich';
+  if (method === 'queries') return '';
+  if (method === 'body') {
+    const primaryParameters = data.peopleEnrichPrimaryParameters ? makeTableMap(data.peopleEnrichPrimaryParameters, 'key', 'value') : {};
+    let nameParameters = data.peopleEnrichNameParameters ? makeTableMap(data.peopleEnrichNameParameters, 'key', 'value') : {};
+    let secondaryParameters = data.peopleEnrichSecondaryParameters ? makeTableMap(data.peopleEnrichSecondaryParameters, 'key', 'value') : {};
+    let includeParameters = data.peopleEnrichIncludeParameters ? { include: Object.values(data.peopleEnrichIncludeParameters) } : [];
+    let secondaryObject = {};
+
+    nameParameters = !!(nameParameters.first_name && nameParameters.last_name) === false ? {} : nameParameters;
+
+    Object.entries(secondaryParameters).forEach((parameter) => {
+      if (parameter[0].match('education|company|company_domain') && getType(parameter[1]) === 'string') {
+        parameter[1] = parameter[1].split(',').map((param) => param.trim());
+        secondaryObject[parameter[0]] = parameter[1];
+      }
+      return secondaryObject;
+    });
+
+    if (getType(includeParameters.include) === 'array') {
+      includeParameters.include = includeParameters.include.map((parameter) => parameter.key);
+    }
+    return mergeObjects(primaryParameters, nameParameters, secondaryObject, includeParameters);
+  }
+}
+
+function contactInfoSingleHandler(method) {
+  const profile = data.linkedinProfile;
+  const emailType = data.emailType;
+  const includePhone = data.includePhone;
+  if (method === 'requestMethod') return 'GET';
+  if (method === 'path') return '/people/linkedin';
+  if (method === 'queries') {
+    return '/?' + 'profile=' + profile + '&email_type=' + emailType + '&include_phone=' + includePhone;
+  }
+  if (method === 'body') return undefined;
+}
+
+function emailVerifierHandler(method) {
+  const email = data.email;
+  if (method === 'requestMethod') return 'GET';
+  if (method === 'path') return '/email/verify';
+  if (method === 'queries') return '?' + 'email=' + email;
+  if (method === 'body') return undefined;
+}
 /*==============================================================================
   Helpers
 ==============================================================================*/
 
-function enc(data) {
-  return encodeUriComponent(makeString(data || ''));
+function handleGuardClauses(eventData) {
+  const url = eventData.page_location || getRequestHeader('referer');
+
+  if (url && url.lastIndexOf('https://gtm-msr.appspot.com/', 0) === 0) return true;
+
+  if (data.apiSelection === 'people_enrich') {
+    if (!data.peopleEnrichPrimaryParameters && !data.peopleEnrichNameParameters) return true;
+  }
 }
 
-function isSHA256Base64Hashed(value) {
-  if (!value) return false;
-  const valueStr = makeString(value);
-  const base64Regex = '^[A-Za-z0-9+/]{43}=?$';
-  return valueStr.match(base64Regex) !== null;
+function extractKeyFromObject(keyPath, sourceObject) {
+  const keys = keyPath.split('.');
+  return keys.reduce((object, key) => {
+    if (sourceObject === undefined) return undefined;
+    if (object.hasOwnProperty(key)) return object[key];
+    return undefined;
+  }, sourceObject);
 }
 
-function isSHA256HexHashed(value) {
-  if (!value) return false;
-  const valueStr = makeString(value);
-  const hexRegex = '^[A-Fa-f0-9]{64}$';
-  return valueStr.match(hexRegex) !== null;
+function mergeObjects() {
+  const objectToReturn = {};
+  if (getType(arguments) === 'array' && arguments.length) {
+    arguments.forEach((object) => {
+      if (getType(object) === 'object') {
+        for (let key in object) {
+          objectToReturn[key] = object[key];
+        }
+      }
+    });
+  }
+  return objectToReturn;
 }
 
-function hashData(value) {
-  if (!value) return value;
+function createNestedObject(obj, path, value) {
+  const parts = path.split('.');
+  let current = obj;
 
-  const type = getType(value);
+  for (let i = 0; i < parts.length; i++) {
+    const part = parts[i];
+    const isArrayIndex = part.match('^[0-9]+$');
+    const key = isArrayIndex ? makeInteger(part) : part;
 
-  if (value === 'undefined' || value === 'null') return undefined;
+    if (i === parts.length - 1) {
+      current[key] = value;
+      break;
+    }
 
-  if (type === 'array') {
-    return value.map((val) => hashData(val));
+    if (isArrayIndex) {
+      let nextStructure = current[key];
+
+      if (!nextStructure) {
+        const nextPart = parts[i + 1];
+        const isNextArrayIndex = nextPart.match('^[0-9]+$');
+
+        if (isNextArrayIndex) {
+          nextStructure = [];
+        } else {
+          nextStructure = {};
+        }
+        current[key] = nextStructure;
+      }
+
+      current = current[key];
+      continue;
+    }
+
+    if (!current[key] || typeof current[key] !== 'object') {
+      const nextPart = parts[i + 1];
+      const isNextArrayIndex = nextPart.match('^[0-9]+$');
+
+      if (isArrayIndex || isNextArrayIndex) {
+        current[key] = [];
+      } else {
+        current[key] = {};
+      }
+    }
+    current = current[key];
   }
 
-  if (type === 'object') {
-    return Object.keys(value).reduce((acc, val) => {
-      acc[val] = hashData(value[val]);
-      return acc;
-    }, {});
-  }
-
-  if (isSHA256HexHashed(value) || isSHA256Base64Hashed(value)) return value;
-
-  return sha256Sync(makeString(value).trim().toLowerCase(), {
-    outputEncoding: 'hex'
-  });
-}
-
-function isValidValue(value) {
-  const valueType = getType(value);
-  return valueType !== 'null' && valueType !== 'undefined' && value !== '';
-}
-
-function isConsentGivenOrNotRequired(data, eventData) {
-  if (data.adStorageConsent !== 'required') return true;
-  if (eventData.consent_state) return !!eventData.consent_state.ad_storage;
-  const xGaGcs = eventData['x-ga-gcs'] || ''; // x-ga-gcs is a string like "G110"
-  return xGaGcs[2] === '1';
+  return obj;
 }
 
 function log(rawDataToLog) {

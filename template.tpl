@@ -14,7 +14,7 @@ ___INFO___
   "version": 1,
   "securityGroups": [],
   "displayName": "Contactout Lookup Variable",
-  "description": "",
+  "description": "Variable that returns contact information from Contactout API. It currently supports:\n - People Enrich API;\n - Contact Info Single API;\n - Email Verifier API;",
   "containerContexts": [
     "SERVER"
   ]
@@ -27,7 +27,7 @@ ___TEMPLATE_PARAMETERS___
   {
     "type": "GROUP",
     "name": "configGroup",
-    "displayName": "",
+    "displayName": "API Lookup Configuration",
     "groupStyle": "NO_ZIPPY",
     "subParams": [
       {
@@ -37,15 +37,15 @@ ___TEMPLATE_PARAMETERS___
         "macrosInSelect": false,
         "selectItems": [
           {
-            "value": "contactInfoSingle",
+            "value": "ContactInfoSingle",
             "displayValue": "Contact Info - Single"
           },
           {
-            "value": "peopleEnrich",
+            "value": "PeopleEnrich",
             "displayValue": "People Enrich"
           },
           {
-            "value": "emailVerifier",
+            "value": "EmailVerifier",
             "displayValue": "Email Verifier"
           }
         ],
@@ -66,15 +66,101 @@ ___TEMPLATE_PARAMETERS___
           {
             "type": "NON_EMPTY"
           }
-        ]
+        ],
+        "help": "You can find you API Key in the upper right corner of your \u003ca href\u003d\"https://contactout.com/api-dashboard\"\u003e API Dashboard \u003c/a\u003e"
       },
       {
         "type": "CHECKBOX",
-        "name": "useOptimisticScenario",
-        "checkboxText": "Use Optimistic Scenario?",
+        "name": "storeResponse",
+        "checkboxText": "Store response in cache",
         "simpleValueType": true,
-        "help": "The tag will call gtmOnSuccess() without waiting for a response from the API. This will speed up sGTM response time however your tag will always return the status fired successfully even in case it is not.",
-        "subParams": []
+        "help": "Store the response in Template Storage. If all parameters of the request are the same response will be taken from the cache if it exists. Defaults to \u003cb\u003eenabled\u003c/b\u003e",
+        "subParams": [
+          {
+            "type": "TEXT",
+            "name": "expirationTime",
+            "displayName": "Cache Expiration Time (Hours)",
+            "simpleValueType": true,
+            "help": "Will update cache if data is expired.",
+            "enablingConditions": [
+              {
+                "paramName": "storeResponse",
+                "paramValue": true,
+                "type": "EQUALS"
+              }
+            ],
+            "valueValidators": [
+              {
+                "type": "POSITIVE_NUMBER"
+              },
+              {
+                "type": "NON_EMPTY"
+              }
+            ],
+            "defaultValue": 12
+          }
+        ],
+        "defaultValue": true
+      },
+      {
+        "type": "CHECKBOX",
+        "name": "outputKeys",
+        "checkboxText": "Extract keys from returned JSON object",
+        "simpleValueType": true,
+        "enablingConditions": [
+          {
+            "paramName": "apiSelection",
+            "paramValue": "email_verifier",
+            "type": "NOT_EQUALS"
+          }
+        ],
+        "subParams": [
+          {
+            "type": "TEXT",
+            "name": "outputKeysList",
+            "displayName": "Key Names",
+            "simpleValueType": true,
+            "enablingConditions": [
+              {
+                "paramName": "outputKeys",
+                "paramValue": true,
+                "type": "EQUALS"
+              }
+            ],
+            "valueValidators": [
+              {
+                "type": "NON_EMPTY"
+              }
+            ],
+            "help": ""
+          },
+          {
+            "type": "RADIO",
+            "name": "objectOutput",
+            "displayName": "Output object structure",
+            "radioItems": [
+              {
+                "value": "createFlatObject",
+                "displayValue": "Create one-level deep (flat) object."
+              },
+              {
+                "value": "createNestedObject",
+                "displayValue": "Create nested object."
+              }
+            ],
+            "simpleValueType": true,
+            "help": "If you want some nested key to persist in the same nested position as the source object, mark \u003cb\u003eCreate Nested Object\u003c/b\u003e, otherwise it will return a flat object",
+            "enablingConditions": [
+              {
+                "paramName": "outputKeys",
+                "paramValue": true,
+                "type": "EQUALS"
+              }
+            ],
+            "defaultValue": "createFlatObject"
+          }
+        ],
+        "help": "Limit the returning object by choosing one or more specific keys you want to extract. \u003c/br\u003e \nIf needed to extract nested values, use dot notation. \u003c/br\u003e(e.g. \u003ci\u003efoo.id\u003c/i\u003e, \u003ci\u003ebar.0.price\u003c/i\u003e).\u003c/br\u003e\nIf multiple keys are listed, they will be returned in a key/value JSON format.\n\u003cb\u003eSeparate the keys/paths by comma.\u003c/b\u003e"
       }
     ]
   },
@@ -83,14 +169,95 @@ ___TEMPLATE_PARAMETERS___
     "name": "contactInfoSingleAPIGroup",
     "displayName": "Contact Info Single Lookup Configuration",
     "groupStyle": "NO_ZIPPY",
-    "subParams": [],
+    "subParams": [
+      {
+        "type": "TEXT",
+        "name": "linkedinProfile",
+        "displayName": "Linkedin Profile",
+        "simpleValueType": true,
+        "help": "The fully formed URL of the LinkedIn profile. URL must begin with \u003ci\u003ehttp\u003c/i\u003e and must contain \u003cb\u003elinkedin.com/in/\u003c/b\u003e or \u003cb\u003elinkedin.com/pub/\u003c/b\u003e \u003c/br\u003e\n(E.g. \"https://www.linkedin.com/in/jane-doe-18951158\")",
+        "valueValidators": [
+          {
+            "type": "NON_EMPTY"
+          },
+          {
+            "type": "REGEX",
+            "args": [
+              "(https?).*linkedin.*\\/(in|pub)\\/.+"
+            ]
+          }
+        ]
+      },
+      {
+        "type": "SELECT",
+        "name": "emailType",
+        "displayName": "Email Type",
+        "macrosInSelect": false,
+        "selectItems": [
+          {
+            "value": "personal_email",
+            "displayValue": "Personal Email"
+          },
+          {
+            "value": "work_email",
+            "displayValue": "Work Email"
+          },
+          {
+            "value": "personal,work",
+            "displayValue": "Both Personal and Work Emails"
+          },
+          {
+            "value": "none",
+            "displayValue": "None"
+          }
+        ],
+        "simpleValueType": true,
+        "defaultValue": "none"
+      },
+      {
+        "type": "CHECKBOX",
+        "name": "includePhone",
+        "checkboxText": "Include Phone",
+        "simpleValueType": true,
+        "help": "If you check this box it will include phone information in the response and deduct phone credits."
+      }
+    ],
     "enablingConditions": [
       {
         "paramName": "apiSelection",
-        "paramValue": "contactInfoSingle",
+        "paramValue": "ContactInfoSingle",
         "type": "EQUALS"
       }
-    ]
+    ],
+    "help": "Returns a user data object from a LinkedIn profile as specified in the  \u003ca href\u003d\"https://api.contactout.com/#contact-info-api-single\"\u003e documentation \u003c/a\u003e.\u003c/br\u003e"
+  },
+  {
+    "type": "GROUP",
+    "name": "emailVerifierAPIGroup",
+    "displayName": "Email Verifier Lookup Configuration",
+    "groupStyle": "NO_ZIPPY",
+    "subParams": [
+      {
+        "type": "TEXT",
+        "name": "email",
+        "displayName": "Email Address",
+        "simpleValueType": true,
+        "help": "Email address string to check for deliverability.",
+        "valueValidators": [
+          {
+            "type": "NON_EMPTY"
+          }
+        ]
+      }
+    ],
+    "enablingConditions": [
+      {
+        "paramName": "apiSelection",
+        "paramValue": "EmailVerifier",
+        "type": "EQUALS"
+      }
+    ],
+    "help": "Verifies the deliverability of an email address as specified in the  \u003ca href\u003d\"https://api.contactout.com/#email-verifier-api\"\u003e documentation \u003c/a\u003e."
   },
   {
     "type": "GROUP",
@@ -101,16 +268,16 @@ ___TEMPLATE_PARAMETERS___
       {
         "type": "SIMPLE_TABLE",
         "name": "peopleEnrichPrimaryParameters",
-        "displayName": "",
+        "displayName": "Primary",
         "simpleTableColumns": [
           {
             "defaultValue": "",
-            "displayName": "Primary Parameters",
+            "displayName": "Parameters",
             "name": "key",
             "type": "SELECT",
             "selectItems": [
               {
-                "value": "linkedinUrl",
+                "value": "linkedin_url",
                 "displayValue": "Linkedin Profile URL"
               },
               {
@@ -147,25 +314,25 @@ ___TEMPLATE_PARAMETERS___
       {
         "type": "SIMPLE_TABLE",
         "name": "peopleEnrichNameParameters",
-        "displayName": "Help",
+        "displayName": "Name",
         "simpleTableColumns": [
           {
             "defaultValue": "",
-            "displayName": "Name Parameters",
+            "displayName": "Parameters",
             "name": "key",
             "type": "SELECT",
             "selectItems": [
               {
-                "value": "fullname",
+                "value": "full_name",
                 "displayValue": "Full Name"
               },
               {
-                "value": "firstname",
+                "value": "first_name",
                 "displayValue": "First Name"
               },
               {
-                "value": "phone",
-                "displayValue": "lastname"
+                "value": "last_name",
+                "displayValue": "Last Name"
               }
             ],
             "valueValidators": [
@@ -194,11 +361,11 @@ ___TEMPLATE_PARAMETERS___
       {
         "type": "SIMPLE_TABLE",
         "name": "peopleEnrichSecondaryParameters",
-        "displayName": "",
+        "displayName": "Secondary",
         "simpleTableColumns": [
           {
             "defaultValue": "",
-            "displayName": "Secondary Paremeters",
+            "displayName": "Parameters",
             "name": "key",
             "type": "SELECT",
             "selectItems": [
@@ -207,7 +374,7 @@ ___TEMPLATE_PARAMETERS___
                 "displayValue": "Company"
               },
               {
-                "value": "companyDomains",
+                "value": "company_domain",
                 "displayValue": "Company Domain"
               },
               {
@@ -219,7 +386,7 @@ ___TEMPLATE_PARAMETERS___
                 "displayValue": "Location"
               },
               {
-                "value": "jobTitle",
+                "value": "job_title",
                 "displayValue": "Job Title"
               }
             ],
@@ -247,20 +414,20 @@ ___TEMPLATE_PARAMETERS___
       {
         "type": "SIMPLE_TABLE",
         "name": "peopleEnrichIncludeParameters",
-        "displayName": "",
+        "displayName": "Include",
         "simpleTableColumns": [
           {
             "defaultValue": "",
-            "displayName": "Data to be included on response",
+            "displayName": "Parameters",
             "name": "key",
             "type": "SELECT",
             "selectItems": [
               {
-                "value": "workEmail",
+                "value": "work_email",
                 "displayValue": "Work Email"
               },
               {
-                "value": "personalEmail",
+                "value": "personal_email",
                 "displayValue": "Personal Email"
               },
               {
@@ -276,13 +443,14 @@ ___TEMPLATE_PARAMETERS___
             "isUnique": true
           }
         ],
-        "newRowButtonText": "Add Parameter"
+        "newRowButtonText": "Add Parameter",
+        "help": "By default this API does not retrieve \u003cb\u003ephone\u003c/b\u003e, \u003cb\u003epersonal_email\u003c/b\u003e or \u003cb\u003ework_email\u003c/b\u003e. To get these values on the response, add them here."
       }
     ],
     "enablingConditions": [
       {
         "paramName": "apiSelection",
-        "paramValue": "peopleEnrich",
+        "paramValue": "PeopleEnrich",
         "type": "EQUALS"
       }
     ],
@@ -389,7 +557,6 @@ ___TEMPLATE_PARAMETERS___
 ___SANDBOXED_JS_FOR_SERVER___
 
 const BigQuery = require('BigQuery');
-const encodeUriComponent = require('encodeUriComponent');
 const getAllEventData = require('getAllEventData');
 const getContainerVersion = require('getContainerVersion');
 const getRequestHeader = require('getRequestHeader');
@@ -398,147 +565,291 @@ const getType = require('getType');
 const JSON = require('JSON');
 const logToConsole = require('logToConsole');
 const makeString = require('makeString');
+const makeTableMap = require('makeTableMap');
 const Object = require('Object');
 const sendHttpRequest = require('sendHttpRequest');
 const sha256Sync = require('sha256Sync');
+const Promise = require('Promise');
+const templateDataStorage = require('templateDataStorage');
+const makeInteger = require('makeInteger');
 
 /*==============================================================================
+  MAIN EXECUTION
 ==============================================================================*/
 
 const eventData = getAllEventData();
-const useOptimisticScenario = data.useOptimisticScenario;
-const url = eventData.page_location || getRequestHeader('referer');
-const postBody = {};
-const queries = [];
-let requestConfig = {};
+const apiMethodsMapping = {
+  PeopleEnrich: peopleEnrichHandler,
+  ContactInfoSingle: contactInfoSingleHandler,
+  EmailVerifier: emailVerifierHandler
+};
 
-if (!isConsentGivenOrNotRequired(data, eventData)) {
-  return data.gtmOnSuccess();
-}
+if (handleGuardClauses(eventData)) return; //Early return
 
-if (url && url.lastIndexOf('https://gtm-msr.appspot.com/', 0) === 0) {
-  return data.gtmOnSuccess();
-}
+const requestBody = handleRequestBody(data, eventData);
+const requestConfig = handleRequestConfig(data, eventData);
 
-sendRequest(requestConfig, postBody, queries);
-
-if (useOptimisticScenario) {
-  return data.gtmOnSuccess();
-}
+return sendRequest(requestConfig, requestBody);
 
 /*==============================================================================
-  Vendor Related Functions
+ VENDOR RELATED FUNCTIONS
 ==============================================================================*/
 
-function normalizePhoneNumber(phoneNumber) {
-  if (!phoneNumber) return phoneNumber;
+function sendRequest(requestConfig, requestBody) {
+  const chosenApi = data.apiSelection;
+  const cacheKey = sha256Sync('contactout_' + chosenApi + '_' + JSON.stringify(requestBody));
+  const cacheKeyTimestamp = cacheKey + '_timestamp';
+  const cacheExpirationTimeMillis = data.expirationTime && makeInteger(data.expirationTime) * 60 * 60 * 1000;
+  const now = getTimestampMillis();
+  const keysToReturn = data.outputKeys ? data.outputKeysList.split(',') : 'fullObject';
+  let returnBody = {};
 
-  phoneNumber = phoneNumber.split(' ').join('').split('-').join('').split('(').join('').split(')').join('');
+  if (data.storeResponse) {
+    let cachedValues = templateDataStorage.getItemCopy(cacheKey);
+    const cachedValueTimestamp = templateDataStorage.getItemCopy(cacheKeyTimestamp);
+    if (data.expirationTime) {
+      if (cachedValueTimestamp && now - makeInteger(cachedValueTimestamp) >= cacheExpirationTimeMillis) {
+        cachedValues = '';
+        templateDataStorage.removeItem(cacheKey);
+        templateDataStorage.removeItem(cacheKeyTimestamp);
+      }
+    }
+    if (cachedValues) return Promise.create((resolve) => resolve(cachedValues));
+  }
 
-  if (phoneNumber[0] !== '+') phoneNumber = '+' + phoneNumber;
-  return phoneNumber;
-}
-
-function sendRequest(requestConfig, postBody, queries) {
   log({
     Name: 'ContactoutLookup',
     Type: 'Request',
-    EventName: 'API_' + requestConfig.apiName.toUpperCase() + '_LOOKUP',
-    RequestMethod: 'POST',
+    EventName: requestConfig.apiName + 'Api_' + 'Lookup',
+    RequestMethod: requestConfig.options.method,
     RequestUrl: requestConfig.url,
-    RequestBody: postBody
+    RequestBody: requestBody
   });
 
-  return sendHttpRequest(requestConfig.url, requestConfig.options, JSON.stringify(postBody))
+  return sendHttpRequest(requestConfig.url, requestConfig.options, JSON.stringify(requestBody))
     .then((result) => {
-      // .then has to be used when the Authorization header is in use
       log({
         Name: 'ContactoutLookup',
         Type: 'Response',
-        EventName: 'API_' + requestConfig.apiName.toUpperCase() + '_LOOKUP',
+        EventName: requestConfig.apiName + 'Api_' + 'Lookup',
         ResponseStatusCode: result.statusCode,
         ResponseHeaders: result.headers,
         ResponseBody: result.body
       });
 
-      if (!useOptimisticScenario) {
-        if (result.statusCode >= 200 && result.statusCode < 400) {
-          data.gtmOnSuccess();
-        } else {
-          data.gtmOnFailure();
+      if (makeString(result.statusCode) === '200' && result.body) {
+        if (data.storeResponse) {
+          log(result.body);
+          templateDataStorage.setItemCopy(cacheKey, result.body);
+          templateDataStorage.setItemCopy(cacheKeyTimestamp, now);
         }
+
+        return createReturningObject(result.body, keysToReturn);
       }
     })
     .catch((result) => {
       log({
         Name: 'ContactoutLookup',
         Type: 'Message',
-        EventName: 'API_' + requestConfig.apiName.toUpperCase() + '_LOOKUP',
+        EventName: requestConfig.apiName + 'Api_' + 'Lookup',
         Message: 'Request failed or timed out.',
         Reason: JSON.stringify(result)
       });
-
-      if (!useOptimisticScenario) data.gtmOnFailure();
+      return;
     });
 }
 
+function createReturningObject(sourceObject, keysToReturn) {
+  let returnObject = {};
+  const isSingleKey = getType(keysToReturn) === 'array' && keysToReturn.length === 1;
+
+  if (data.apiSelection === 'email_verifier') {
+    return JSON.parse(sourceObject).data.status;
+  }
+
+  if (keysToReturn === 'fullObject') {
+    return JSON.parse(sourceObject);
+  }
+
+  if (getType(keysToReturn) === 'array' && keysToReturn.length) {
+    keysToReturn = keysToReturn.map((key) => key.trim());
+    keysToReturn.forEach((keyPath) => {
+      const splitKeyPath = keyPath.split('.');
+      const lastKeyPathNamespace = splitKeyPath[splitKeyPath.length - 1].match('^[0-9]*$') ? splitKeyPath[splitKeyPath.length - 2] : splitKeyPath[splitKeyPath.length - 1];
+
+      if (data.objectOutput === 'createFlatObject') {
+        returnObject[lastKeyPathNamespace] = extractKeyFromObject(keyPath, JSON.parse(sourceObject));
+      }
+
+      if (data.objectOutput === 'createNestedObject') {
+        returnObject = createNestedObject(returnObject, keyPath, extractKeyFromObject(keyPath, JSON.parse(sourceObject)));
+      }
+    });
+  }
+  return isSingleKey ? extractKeyFromObject(keysToReturn[0], JSON.parse(sourceObject)) : returnObject;
+}
+
+function handleRequestBody(data, eventData) {
+  return apiMethodsMapping[data.apiSelection]('body', eventData);
+}
+
+function handleRequestConfig(data, eventData) {
+  const apiBaseUrl = 'https://api.contactout.com/';
+  const apiVersion = 'v1';
+  const apiPath = apiMethodsMapping[data.apiSelection]('path');
+  const apiQueries = apiMethodsMapping[data.apiSelection]('queries');
+  const apiNameMapping = {
+    PeopleEnrich: 'PEOPLE_ENRICH',
+    ContactInfoSingle: 'CONTACT_INFO_SINGLE',
+    EmailVerifier: 'EMAIL_VERIFIER'
+  };
+  const requestConfig = {
+    apiName: apiNameMapping[data.apiSelection],
+    url: apiBaseUrl + apiVersion + apiPath + apiQueries,
+    options: {
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+        token: data.apiKey
+      },
+      method: apiMethodsMapping[data.apiSelection]('requestMethod'),
+      timeout: 15000
+    }
+  };
+  return requestConfig;
+}
+
+function peopleEnrichHandler(method) {
+  if (method === 'requestMethod') return 'POST';
+  if (method === 'path') return '/people/enrich';
+  if (method === 'queries') return '';
+  if (method === 'body') {
+    const primaryParameters = data.peopleEnrichPrimaryParameters ? makeTableMap(data.peopleEnrichPrimaryParameters, 'key', 'value') : {};
+    let nameParameters = data.peopleEnrichNameParameters ? makeTableMap(data.peopleEnrichNameParameters, 'key', 'value') : {};
+    let secondaryParameters = data.peopleEnrichSecondaryParameters ? makeTableMap(data.peopleEnrichSecondaryParameters, 'key', 'value') : {};
+    let includeParameters = data.peopleEnrichIncludeParameters ? { include: Object.values(data.peopleEnrichIncludeParameters) } : [];
+    let secondaryObject = {};
+
+    nameParameters = !!(nameParameters.first_name && nameParameters.last_name) === false ? {} : nameParameters;
+
+    Object.entries(secondaryParameters).forEach((parameter) => {
+      if (parameter[0].match('education|company|company_domain') && getType(parameter[1]) === 'string') {
+        parameter[1] = parameter[1].split(',').map((param) => param.trim());
+        secondaryObject[parameter[0]] = parameter[1];
+      }
+      return secondaryObject;
+    });
+
+    if (getType(includeParameters.include) === 'array') {
+      includeParameters.include = includeParameters.include.map((parameter) => parameter.key);
+    }
+    return mergeObjects(primaryParameters, nameParameters, secondaryObject, includeParameters);
+  }
+}
+
+function contactInfoSingleHandler(method) {
+  const profile = data.linkedinProfile;
+  const emailType = data.emailType;
+  const includePhone = data.includePhone;
+  if (method === 'requestMethod') return 'GET';
+  if (method === 'path') return '/people/linkedin';
+  if (method === 'queries') {
+    return '/?' + 'profile=' + profile + '&email_type=' + emailType + '&include_phone=' + includePhone;
+  }
+  if (method === 'body') return undefined;
+}
+
+function emailVerifierHandler(method) {
+  const email = data.email;
+  if (method === 'requestMethod') return 'GET';
+  if (method === 'path') return '/email/verify';
+  if (method === 'queries') return '?' + 'email=' + email;
+  if (method === 'body') return undefined;
+}
 /*==============================================================================
   Helpers
 ==============================================================================*/
 
-function enc(data) {
-  return encodeUriComponent(makeString(data || ''));
+function handleGuardClauses(eventData) {
+  const url = eventData.page_location || getRequestHeader('referer');
+
+  if (url && url.lastIndexOf('https://gtm-msr.appspot.com/', 0) === 0) return true;
+
+  if (data.apiSelection === 'people_enrich') {
+    if (!data.peopleEnrichPrimaryParameters && !data.peopleEnrichNameParameters) return true;
+  }
 }
 
-function isSHA256Base64Hashed(value) {
-  if (!value) return false;
-  const valueStr = makeString(value);
-  const base64Regex = '^[A-Za-z0-9+/]{43}=?$';
-  return valueStr.match(base64Regex) !== null;
+function extractKeyFromObject(keyPath, sourceObject) {
+  const keys = keyPath.split('.');
+  return keys.reduce((object, key) => {
+    if (sourceObject === undefined) return undefined;
+    if (object.hasOwnProperty(key)) return object[key];
+    return undefined;
+  }, sourceObject);
 }
 
-function isSHA256HexHashed(value) {
-  if (!value) return false;
-  const valueStr = makeString(value);
-  const hexRegex = '^[A-Fa-f0-9]{64}$';
-  return valueStr.match(hexRegex) !== null;
+function mergeObjects() {
+  const objectToReturn = {};
+  if (getType(arguments) === 'array' && arguments.length) {
+    arguments.forEach((object) => {
+      if (getType(object) === 'object') {
+        for (let key in object) {
+          objectToReturn[key] = object[key];
+        }
+      }
+    });
+  }
+  return objectToReturn;
 }
 
-function hashData(value) {
-  if (!value) return value;
+function createNestedObject(obj, path, value) {
+  const parts = path.split('.');
+  let current = obj;
 
-  const type = getType(value);
+  for (let i = 0; i < parts.length; i++) {
+    const part = parts[i];
+    const isArrayIndex = part.match('^[0-9]+$');
+    const key = isArrayIndex ? makeInteger(part) : part;
 
-  if (value === 'undefined' || value === 'null') return undefined;
+    if (i === parts.length - 1) {
+      current[key] = value;
+      break;
+    }
 
-  if (type === 'array') {
-    return value.map((val) => hashData(val));
+    if (isArrayIndex) {
+      let nextStructure = current[key];
+
+      if (!nextStructure) {
+        const nextPart = parts[i + 1];
+        const isNextArrayIndex = nextPart.match('^[0-9]+$');
+
+        if (isNextArrayIndex) {
+          nextStructure = [];
+        } else {
+          nextStructure = {};
+        }
+        current[key] = nextStructure;
+      }
+
+      current = current[key];
+      continue;
+    }
+
+    if (!current[key] || typeof current[key] !== 'object') {
+      const nextPart = parts[i + 1];
+      const isNextArrayIndex = nextPart.match('^[0-9]+$');
+
+      if (isArrayIndex || isNextArrayIndex) {
+        current[key] = [];
+      } else {
+        current[key] = {};
+      }
+    }
+    current = current[key];
   }
 
-  if (type === 'object') {
-    return Object.keys(value).reduce((acc, val) => {
-      acc[val] = hashData(value[val]);
-      return acc;
-    }, {});
-  }
-
-  if (isSHA256HexHashed(value) || isSHA256Base64Hashed(value)) return value;
-
-  return sha256Sync(makeString(value).trim().toLowerCase(), {
-    outputEncoding: 'hex'
-  });
-}
-
-function isValidValue(value) {
-  const valueType = getType(value);
-  return valueType !== 'null' && valueType !== 'undefined' && value !== '';
-}
-
-function isConsentGivenOrNotRequired(data, eventData) {
-  if (data.adStorageConsent !== 'required') return true;
-  if (eventData.consent_state) return !!eventData.consent_state.ad_storage;
-  const xGaGcs = eventData['x-ga-gcs'] || ''; // x-ga-gcs is a string like "G110"
-  return xGaGcs[2] === '1';
+  return obj;
 }
 
 function log(rawDataToLog) {
@@ -681,6 +992,9 @@ ___SERVER_PERMISSIONS___
         }
       ]
     },
+    "clientAnnotations": {
+      "isEditedByUser": true
+    },
     "isRequired": true
   },
   {
@@ -741,6 +1055,67 @@ ___SERVER_PERMISSIONS___
         "publicId": "access_bigquery",
         "versionId": "1"
       },
+      "param": [
+        {
+          "key": "allowedTables",
+          "value": {
+            "type": 2,
+            "listItem": [
+              {
+                "type": 3,
+                "mapKey": [
+                  {
+                    "type": 1,
+                    "string": "projectId"
+                  },
+                  {
+                    "type": 1,
+                    "string": "datasetId"
+                  },
+                  {
+                    "type": 1,
+                    "string": "tableId"
+                  },
+                  {
+                    "type": 1,
+                    "string": "operation"
+                  }
+                ],
+                "mapValue": [
+                  {
+                    "type": 1,
+                    "string": "*"
+                  },
+                  {
+                    "type": 1,
+                    "string": "*"
+                  },
+                  {
+                    "type": 1,
+                    "string": "*"
+                  },
+                  {
+                    "type": 1,
+                    "string": "write"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "clientAnnotations": {
+      "isEditedByUser": true
+    },
+    "isRequired": true
+  },
+  {
+    "instance": {
+      "key": {
+        "publicId": "access_template_storage",
+        "versionId": "1"
+      },
       "param": []
     },
     "isRequired": true
@@ -750,11 +1125,26 @@ ___SERVER_PERMISSIONS___
 
 ___TESTS___
 
-scenarios: []
+scenarios:
+- name: Untitled test 1
+  code: |
+    const mockData = {
+      // Mocked field values
+    };
+
+    // Call runCode to run the template's code.
+    let variableResult = runCode(mockContactInfoSingleAPISingleValue);
+setup: |-
+  const mockContactInfoSingleAPISingleValue = {
+    apiSelection: 'contact_info_single',
+    apiKey: 'PhlELrnhBr0rDNed5xwFGvTr',
+    linkedinProfile: 'https://www.linkedin.com/in/jane-doe-18951158',
+    outputKeysList: "profile.url"
+  };
 
 
 ___NOTES___
 
-Created on 11/11/2025, 15:04:03
+Created on 20/11/2025, 11:11:39
 
 
