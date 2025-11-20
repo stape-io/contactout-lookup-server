@@ -268,11 +268,11 @@ ___TEMPLATE_PARAMETERS___
       {
         "type": "SIMPLE_TABLE",
         "name": "peopleEnrichPrimaryParameters",
-        "displayName": "Primary",
+        "displayName": "Primary Parameters",
         "simpleTableColumns": [
           {
             "defaultValue": "",
-            "displayName": "Parameters",
+            "displayName": "Parameter Name",
             "name": "key",
             "type": "SELECT",
             "selectItems": [
@@ -298,7 +298,7 @@ ___TEMPLATE_PARAMETERS___
           },
           {
             "defaultValue": "",
-            "displayName": "Value",
+            "displayName": "Parameter Value",
             "name": "value",
             "type": "TEXT",
             "valueValidators": [
@@ -314,11 +314,11 @@ ___TEMPLATE_PARAMETERS___
       {
         "type": "SIMPLE_TABLE",
         "name": "peopleEnrichNameParameters",
-        "displayName": "Name",
+        "displayName": "Name Parameters",
         "simpleTableColumns": [
           {
             "defaultValue": "",
-            "displayName": "Parameters",
+            "displayName": "Parameter Name",
             "name": "key",
             "type": "SELECT",
             "selectItems": [
@@ -344,7 +344,7 @@ ___TEMPLATE_PARAMETERS___
           },
           {
             "defaultValue": "",
-            "displayName": "Value",
+            "displayName": "Parameter Value",
             "name": "value",
             "type": "TEXT",
             "valueValidators": [
@@ -361,11 +361,11 @@ ___TEMPLATE_PARAMETERS___
       {
         "type": "SIMPLE_TABLE",
         "name": "peopleEnrichSecondaryParameters",
-        "displayName": "Secondary",
+        "displayName": "Secondary Parameters",
         "simpleTableColumns": [
           {
             "defaultValue": "",
-            "displayName": "Parameters",
+            "displayName": "Parameter Name",
             "name": "key",
             "type": "SELECT",
             "selectItems": [
@@ -399,7 +399,7 @@ ___TEMPLATE_PARAMETERS___
           },
           {
             "defaultValue": "",
-            "displayName": "Value",
+            "displayName": "Parameter Value",
             "name": "value",
             "type": "TEXT",
             "valueValidators": [
@@ -414,11 +414,11 @@ ___TEMPLATE_PARAMETERS___
       {
         "type": "SIMPLE_TABLE",
         "name": "peopleEnrichIncludeParameters",
-        "displayName": "Include",
+        "displayName": "Include Parameter in Response",
         "simpleTableColumns": [
           {
             "defaultValue": "",
-            "displayName": "Parameters",
+            "displayName": "Parameter",
             "name": "key",
             "type": "SELECT",
             "selectItems": [
@@ -1145,6 +1145,6 @@ setup: |-
 
 ___NOTES___
 
-Created on 20/11/2025, 11:11:39
+Created on 20/11/2025, 11:28:11
 
 
