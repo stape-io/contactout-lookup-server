@@ -28,8 +28,8 @@ const apiMethodsMapping = {
 
 if (handleGuardClauses(eventData)) return; //Early return
 
-const requestBody = handleRequestBody(data, eventData);
-const requestConfig = handleRequestConfig(data, eventData);
+const requestBody = handleRequestBody(data);
+const requestConfig = handleRequestConfig(data);
 
 return sendRequest(requestConfig, requestBody);
 
@@ -39,11 +39,10 @@ return sendRequest(requestConfig, requestBody);
 
 function sendRequest(requestConfig, requestBody) {
   const chosenApi = data.apiSelection;
-  const cacheKey = sha256Sync('contactout_' + chosenApi + '_' + requestConfig.url + JSON.stringify(requestBody));
+  const cacheKey = sha256Sync('contactout_' + chosenApi + '_' + requestConfig.url + JSON.stringify(requestBody) || '');
   const cacheKeyTimestamp = cacheKey + '_timestamp';
   const cacheExpirationTimeMillis = data.expirationTime && makeInteger(data.expirationTime) * 60 * 60 * 1000;
   const now = getTimestampMillis();
-  const keysToReturn = data.outputKeys ? data.outputKeysList.split(',') : undefined;
 
   if (data.storeResponse) {
     let cachedValues = templateDataStorage.getItemCopy(cacheKey);
@@ -55,21 +54,22 @@ function sendRequest(requestConfig, requestBody) {
         templateDataStorage.removeItem(cacheKeyTimestamp);
       }
     }
-    if (cachedValues) return Promise.create((resolve) => resolve(JSON.parse(createReturningObject(cachedValues))));
+    if (cachedValues) return Promise.create((resolve) => resolve(createReturningObject(cachedValues)));
   }
 
   log({
-    Name: 'ContactoutLookup',
+    Name: 'ContactOutLookup',
     Type: 'Request',
     EventName: chosenApi,
     RequestMethod: requestConfig.options.method,
     RequestUrl: requestConfig.url,
     RequestBody: requestBody
   });
+
   return sendHttpRequest(requestConfig.url, requestConfig.options, JSON.stringify(requestBody))
     .then((result) => {
       log({
-        Name: 'ContactoutLookup',
+        Name: 'ContactOutLookup',
         Type: 'Response',
         EventName: chosenApi,
         ResponseStatusCode: result.statusCode,
@@ -79,17 +79,19 @@ function sendRequest(requestConfig, requestBody) {
 
       if (result.statusCode === 200) {
         const parsedBody = JSON.parse(result.body || '{}');
-        if (!parsedBody) return;
+        if (!parsedBody.status_code || parsedBody.status_code !== 200) return;
         if (data.storeResponse) {
           templateDataStorage.setItemCopy(cacheKey, parsedBody);
           templateDataStorage.setItemCopy(cacheKeyTimestamp, now);
         }
-        return createReturningObject(result.body, keysToReturn);
+        return createReturningObject(parsedBody);
+      } else {
+        return;
       }
     })
     .catch((result) => {
       log({
-        Name: 'ContactoutLookup',
+        Name: 'ContactOutLookup',
         Type: 'Message',
         EventName: chosenApi,
         Message: 'Request failed or timed out.',
@@ -99,20 +101,17 @@ function sendRequest(requestConfig, requestBody) {
     });
 }
 
-function createReturningObject(sourceObject, keysToReturn) {
-  sourceObject = JSON.parse(sourceObject);
+function createReturningObject(sourceObject) {
   let returnObject = {};
 
   if (data.apiSelection === 'EmailVerifier') {
     return sourceObject.data.status;
   }
 
+  const keysToReturn = data.outputKeys ? data.outputKeysList.split(',').map((s) => s.trim()) : undefined;
   if (!keysToReturn) {
     return sourceObject;
-  }
-
-  if (getType(keysToReturn) === 'array') {
-    log(keysToReturn);
+  } else if (getType(keysToReturn) === 'array') {
     if (keysToReturn.length === 1) {
       return extractKeyFromObject(keysToReturn[0], sourceObject);
     } else if (keysToReturn.length > 1) {
@@ -122,18 +121,17 @@ function createReturningObject(sourceObject, keysToReturn) {
   }
 }
 
-function handleRequestBody(data, eventData) {
-  return apiMethodsMapping[data.apiSelection]('body', eventData);
+function handleRequestBody(data) {
+  return apiMethodsMapping[data.apiSelection]('body');
 }
 
-function handleRequestConfig(data, eventData) {
+function handleRequestConfig(data) {
   const apiBaseUrl = 'https://api.contactout.com/';
   const apiVersion = 'v1';
   const apiPath = apiMethodsMapping[data.apiSelection]('path');
   const apiQueries = apiMethodsMapping[data.apiSelection]('queries');
 
   const requestConfig = {
-    apiName: data.apiSelection,
     url: apiBaseUrl + apiVersion + apiPath + apiQueries,
     options: {
       headers: {
@@ -154,8 +152,8 @@ function peopleEnrichHandler(method) {
   if (method === 'body') {
     const primaryParameters = makeTableMap(data.peopleEnrichPrimaryParameters || [], 'key', 'value') || {};
     let nameParameters = makeTableMap(data.peopleEnrichNameParameters || [], 'key', 'value') || {};
-    let secondaryParameters = makeTableMap(data.peopleEnrichSecondaryParameters || [], 'key', 'value') || {};
-    let includeParameters = data.peopleEnrichIncludeParameters ? { include: data.peopleEnrichIncludeParameters.map((o) => o.key) } : undefined;
+    const secondaryParameters = makeTableMap(data.peopleEnrichSecondaryParameters || [], 'key', 'value') || {};
+    const includeParameters = data.peopleEnrichIncludeParameters ? { include: data.peopleEnrichIncludeParameters.map((o) => o.key) } : undefined;
 
     nameParameters = nameParameters.first_name && nameParameters.last_name ? nameParameters : {};
 
@@ -172,19 +170,19 @@ function peopleEnrichHandler(method) {
 }
 
 function contactInfoSingleHandler(method) {
-  let queriesUrl = '/?';
-  const queries = {
-    profile: data.linkedinProfile,
-    email_type: data.emailType,
-    include_phone: data.includePhone
-  };
   if (method === 'requestMethod') return 'GET';
   if (method === 'path') return '/people/linkedin';
   if (method === 'queries') {
+    const queriesUrl = [];
+    const queries = {
+      profile: data.linkedinProfile,
+      email_type: data.emailType,
+      include_phone: data.includePhone
+    };
     for (let key in queries) {
-      if (queries[key]) queriesUrl += key + '=' + encodeUriComponent(queries[key]) + '&';
+      if (queries[key]) queriesUrl.push(key + '=' + encodeUriComponent(queries[key]));
     }
-    return queriesUrl;
+    return '?' + queriesUrl.join('&');
   }
   if (method === 'body') return undefined;
 }
@@ -193,29 +191,27 @@ function emailVerifierHandler(method) {
   const email = data.email;
   if (method === 'requestMethod') return 'GET';
   if (method === 'path') return '/email/verify';
-  if (method === 'queries') return '?' + 'email=' + encodeUriComponent(email);
+  if (method === 'queries') return '?email=' + encodeUriComponent(email);
   if (method === 'body') return undefined;
 }
+
 /*==============================================================================
   Helpers
 ==============================================================================*/
 
 function handleGuardClauses(eventData) {
   const url = eventData.page_location || getRequestHeader('referer');
-
   if (url && url.lastIndexOf('https://gtm-msr.appspot.com/', 0) === 0) return true;
 
-  if (data.apiSelection === 'PeopleEnrich') {
-    if (!data.peopleEnrichPrimaryParameters && !data.peopleEnrichNameParameters) {
-      log({
-        Name: 'ContactoutLookup',
-        Type: 'Message',
-        EventName: 'PeopleEnrich',
-        Message: 'Request failed or timed out.',
-        Reason: 'Wrong combination of required parameters for People Enrich API Lookup'
-      });
-      return true;
-    }
+  if (data.apiSelection === 'PeopleEnrich' && !data.peopleEnrichPrimaryParameters && !data.peopleEnrichNameParameters) {
+    log({
+      Name: 'ContactOutLookup',
+      Type: 'Message',
+      EventName: data.apiSelection,
+      Message: 'Request was not sent.',
+      Reason: 'Wrong combination of required parameters for People Enrich API Lookup'
+    });
+    return true;
   }
 }
 

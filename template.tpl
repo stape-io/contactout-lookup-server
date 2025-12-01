@@ -13,8 +13,13 @@ ___INFO___
   "id": "cvt_temp_public_id",
   "version": 1,
   "securityGroups": [],
-  "displayName": "Contactout Lookup Variable",
-  "description": "Variable that returns contact information from Contactout API. It currently supports:\n - People Enrich API;\n - Contact Info Single API;\n - Email Verifier API;",
+  "displayName": "ContactOut Lookup Variable",
+  "categories": [
+    "DATA_WAREHOUSING"
+    "SALES",
+    "UTILITY"
+  ],
+  "description": "Variable that returns contact information from ContactOut API. It currently supports the: People Enrich API, Contact Info Single API and Email Verifier API.",
   "containerContexts": [
     "SERVER"
   ]
@@ -33,7 +38,7 @@ ___TEMPLATE_PARAMETERS___
       {
         "type": "SELECT",
         "name": "apiSelection",
-        "displayName": "Choose Contactout API",
+        "displayName": "Choose ContactOut API",
         "macrosInSelect": false,
         "selectItems": [
           {
@@ -55,7 +60,7 @@ ___TEMPLATE_PARAMETERS___
             "type": "NON_EMPTY"
           }
         ],
-        "help": "You can find all Contactout APIs references \u003ca href\u003d\"https://api.contactout.com/\"\u003e here \u003c/a\u003e. Bear in mind that not all of them are currently supported here."
+        "help": "You can find all ContactOut APIs references \u003ca href\u003d\"https://api.contactout.com/\"\u003ehere\u003c/a\u003e. Bear in mind that not all of them are currently supported here."
       },
       {
         "type": "TEXT",
@@ -74,7 +79,7 @@ ___TEMPLATE_PARAMETERS___
         "name": "storeResponse",
         "checkboxText": "Store response in cache",
         "simpleValueType": true,
-        "help": "Store the response in Template Storage. If all parameters of the request are the same response will be taken from the cache if it exists. Defaults to \u003cb\u003eenabled\u003c/b\u003e",
+        "help": "Store the response in Template Storage. If all parameters of the request are the same. the response will be taken from the cache if it exists. Defaults to \u003cb\u003eenabled\u003c/b\u003e.",
         "subParams": [
           {
             "type": "TEXT",
@@ -142,15 +147,16 @@ ___TEMPLATE_PARAMETERS___
             "radioItems": [
               {
                 "value": "createFlatObject",
-                "displayValue": "Create one-level deep (flat) object."
+                "displayValue": "Create one-level deep (flat) object",
+                "help": "All nested objects will be transformed it into a single-level object, with their keys joined with an underscore (\"_\"). \u003cbr/\u003e Any hyphens (\"-\") that might exist in the original keys will also be replaced with an underscore (\"_\")."
               },
               {
                 "value": "createNestedObject",
-                "displayValue": "Create nested object."
+                "displayValue": "Create nested object"
               }
             ],
             "simpleValueType": true,
-            "help": "If you want some nested key to persist in the same nested position as the source object, mark \u003cb\u003eCreate Nested Object\u003c/b\u003e, otherwise it will return a flat object",
+            "help": "If you want some nested key to persist in the same nested position as the source object, mark \u003cb\u003eCreate Nested Object\u003c/b\u003e, otherwise it will return a flat object.",
             "enablingConditions": [
               {
                 "paramName": "outputKeys",
@@ -174,7 +180,7 @@ ___TEMPLATE_PARAMETERS___
       {
         "type": "LABEL",
         "name": "helpContactInfoSingle",
-        "displayName": "Returns a user data object from a LinkedIn profile as specified in the  \u003ca href\u003d\"https://api.contactout.com/#contact-info-api-single\"\u003e documentation \u003c/a\u003e.\u003c/br\u003e"
+        "displayName": "Returns a user data object from a LinkedIn profile as specified in the  \u003ca href\u003d\"https://api.contactout.com/#contact-info-api-single\"\u003edocumentation\u003c/a\u003e.\u003c/br\u003e"
       },
       {
         "type": "TEXT",
@@ -242,7 +248,7 @@ ___TEMPLATE_PARAMETERS___
       {
         "type": "LABEL",
         "name": "helpEmailVerifier",
-        "displayName": "Verifies the deliverability of an email address as specified in the  \u003ca href\u003d\"https://api.contactout.com/#email-verifier-api\"\u003e documentation \u003c/a\u003e."
+        "displayName": "Verifies the deliverability of an email address as specified in the  \u003ca href\u003d\"https://api.contactout.com/#email-verifier-api\"\u003edocumentation\u003c/a\u003e."
       },
       {
         "type": "TEXT",
@@ -274,7 +280,7 @@ ___TEMPLATE_PARAMETERS___
       {
         "type": "LABEL",
         "name": "helpPeopleEnrich",
-        "displayName": "Returns a user data object as described in the \u003ca href\u003d\"https://api.contactout.com/#people-enrich-request-parameters\"\u003e documentation \u003c/a\u003e.\u003c/br\u003e"
+        "displayName": "Returns a user data object as described in the \u003ca href\u003d\"https://api.contactout.com/#people-enrich-request-parameters\"\u003edocumentation\u003c/a\u003e.\u003c/br\u003e\nTo return a match, you must provide:\n\u003cul\u003e\u003cli\u003eOne primary identifier (LinkedIn URL, Email, or Phone)\u003c/li\u003e\u003c/ul\u003e\nOR\n\u003cul\u003e\u003cli\u003eA combination of name (e.g. Full Name, or First Name + Last Name) plus at least one secondary parameter (Company, Location, or Education)\u003c/li\u003e\u003c/ul\u003e"
       },
       {
         "type": "SIMPLE_TABLE",
@@ -367,7 +373,7 @@ ___TEMPLATE_PARAMETERS___
           }
         ],
         "newRowButtonText": "Add Parameter",
-        "help": "If setting either \u003cb\u003eFirst Name\u003c/b\u003e or \u003cb\u003e Last Name \u003c/b\u003e, both must be set, otherwise it will be discarded on lookup filtering."
+        "help": "If setting either \u003cb\u003eFirst Name\u003c/b\u003e or \u003cb\u003eLast Name\u003c/b\u003e, both must be set, otherwise it will be discarded on lookup filtering."
       },
       {
         "type": "SIMPLE_TABLE",
@@ -420,7 +426,8 @@ ___TEMPLATE_PARAMETERS___
             ]
           }
         ],
-        "newRowButtonText": "Add Parameter"
+        "newRowButtonText": "Add Parameter",
+        "help": "\u003cb\u003eRequired\u003c/b\u003e when any \u003ci\u003eName Parameter\u003c/i\u003e is used."
       },
       {
         "type": "SIMPLE_TABLE",
@@ -455,7 +462,7 @@ ___TEMPLATE_PARAMETERS___
           }
         ],
         "newRowButtonText": "Add Parameter",
-        "help": "By default this API does not retrieve \u003cb\u003ephone\u003c/b\u003e, \u003cb\u003epersonal_email\u003c/b\u003e or \u003cb\u003ework_email\u003c/b\u003e. To get these values on the response, add them here."
+        "help": "By default this API does not retrieve \u003cb\u003ePhone\u003c/b\u003e, \u003cb\u003ePersonal Email\u003c/b\u003e or \u003cb\u003eWork Email\u003c/b\u003e. To get these values on the response, add them here."
       }
     ],
     "enablingConditions": [
@@ -574,7 +581,6 @@ const getTimestampMillis = require('getTimestampMillis');
 const getType = require('getType');
 const JSON = require('JSON');
 const logToConsole = require('logToConsole');
-const makeString = require('makeString');
 const makeTableMap = require('makeTableMap');
 const Object = require('Object');
 const sendHttpRequest = require('sendHttpRequest');
@@ -597,8 +603,8 @@ const apiMethodsMapping = {
 
 if (handleGuardClauses(eventData)) return; //Early return
 
-const requestBody = handleRequestBody(data, eventData);
-const requestConfig = handleRequestConfig(data, eventData);
+const requestBody = handleRequestBody(data);
+const requestConfig = handleRequestConfig(data);
 
 return sendRequest(requestConfig, requestBody);
 
@@ -608,11 +614,10 @@ return sendRequest(requestConfig, requestBody);
 
 function sendRequest(requestConfig, requestBody) {
   const chosenApi = data.apiSelection;
-  const cacheKey = sha256Sync('contactout_' + chosenApi + '_' + requestConfig.url + JSON.stringify(requestBody));
+  const cacheKey = sha256Sync('contactout_' + chosenApi + '_' + requestConfig.url + JSON.stringify(requestBody) || '');
   const cacheKeyTimestamp = cacheKey + '_timestamp';
   const cacheExpirationTimeMillis = data.expirationTime && makeInteger(data.expirationTime) * 60 * 60 * 1000;
   const now = getTimestampMillis();
-  const keysToReturn = data.outputKeys ? data.outputKeysList.split(',') : undefined;
 
   if (data.storeResponse) {
     let cachedValues = templateDataStorage.getItemCopy(cacheKey);
@@ -624,21 +629,22 @@ function sendRequest(requestConfig, requestBody) {
         templateDataStorage.removeItem(cacheKeyTimestamp);
       }
     }
-    if (cachedValues) return Promise.create((resolve) => resolve(JSON.parse(createReturningObject(cachedValues))));
+    if (cachedValues) return Promise.create((resolve) => resolve(createReturningObject(cachedValues)));
   }
 
   log({
-    Name: 'ContactoutLookup',
+    Name: 'ContactOutLookup',
     Type: 'Request',
     EventName: chosenApi,
     RequestMethod: requestConfig.options.method,
     RequestUrl: requestConfig.url,
     RequestBody: requestBody
   });
+
   return sendHttpRequest(requestConfig.url, requestConfig.options, JSON.stringify(requestBody))
     .then((result) => {
       log({
-        Name: 'ContactoutLookup',
+        Name: 'ContactOutLookup',
         Type: 'Response',
         EventName: chosenApi,
         ResponseStatusCode: result.statusCode,
@@ -648,17 +654,19 @@ function sendRequest(requestConfig, requestBody) {
 
       if (result.statusCode === 200) {
         const parsedBody = JSON.parse(result.body || '{}');
-        if (!parsedBody) return;
+        if (!parsedBody.status_code || parsedBody.status_code !== 200) return;
         if (data.storeResponse) {
           templateDataStorage.setItemCopy(cacheKey, parsedBody);
           templateDataStorage.setItemCopy(cacheKeyTimestamp, now);
         }
-        return createReturningObject(result.body, keysToReturn);
+        return createReturningObject(parsedBody);
+      } else {
+        return;
       }
     })
     .catch((result) => {
       log({
-        Name: 'ContactoutLookup',
+        Name: 'ContactOutLookup',
         Type: 'Message',
         EventName: chosenApi,
         Message: 'Request failed or timed out.',
@@ -668,19 +676,17 @@ function sendRequest(requestConfig, requestBody) {
     });
 }
 
-function createReturningObject(sourceObject, keysToReturn) {
-  sourceObject = JSON.parse(sourceObject);
+function createReturningObject(sourceObject) {
   let returnObject = {};
 
   if (data.apiSelection === 'EmailVerifier') {
     return sourceObject.data.status;
   }
 
+  const keysToReturn = data.outputKeys ? data.outputKeysList.split(',').map((s) => s.trim()) : undefined;
   if (!keysToReturn) {
     return sourceObject;
-  }
-
-  if (getType(keysToReturn) === 'array') {
+  } else if (getType(keysToReturn) === 'array') {
     if (keysToReturn.length === 1) {
       return extractKeyFromObject(keysToReturn[0], sourceObject);
     } else if (keysToReturn.length > 1) {
@@ -690,18 +696,17 @@ function createReturningObject(sourceObject, keysToReturn) {
   }
 }
 
-function handleRequestBody(data, eventData) {
-  return apiMethodsMapping[data.apiSelection]('body', eventData);
+function handleRequestBody(data) {
+  return apiMethodsMapping[data.apiSelection]('body');
 }
 
-function handleRequestConfig(data, eventData) {
+function handleRequestConfig(data) {
   const apiBaseUrl = 'https://api.contactout.com/';
   const apiVersion = 'v1';
   const apiPath = apiMethodsMapping[data.apiSelection]('path');
   const apiQueries = apiMethodsMapping[data.apiSelection]('queries');
 
   const requestConfig = {
-    apiName: data.apiSelection,
     url: apiBaseUrl + apiVersion + apiPath + apiQueries,
     options: {
       headers: {
@@ -722,8 +727,8 @@ function peopleEnrichHandler(method) {
   if (method === 'body') {
     const primaryParameters = makeTableMap(data.peopleEnrichPrimaryParameters || [], 'key', 'value') || {};
     let nameParameters = makeTableMap(data.peopleEnrichNameParameters || [], 'key', 'value') || {};
-    let secondaryParameters = makeTableMap(data.peopleEnrichSecondaryParameters || [], 'key', 'value') || {};
-    let includeParameters = data.peopleEnrichIncludeParameters ? { include: data.peopleEnrichIncludeParameters.map((o) => o.key) } : undefined;
+    const secondaryParameters = makeTableMap(data.peopleEnrichSecondaryParameters || [], 'key', 'value') || {};
+    const includeParameters = data.peopleEnrichIncludeParameters ? { include: data.peopleEnrichIncludeParameters.map((o) => o.key) } : undefined;
 
     nameParameters = nameParameters.first_name && nameParameters.last_name ? nameParameters : {};
 
@@ -740,19 +745,19 @@ function peopleEnrichHandler(method) {
 }
 
 function contactInfoSingleHandler(method) {
-  let queriesUrl = '/?';
-  const queries = {
-    profile: data.linkedinProfile,
-    email_type: data.emailType,
-    include_phone: data.includePhone
-  };
   if (method === 'requestMethod') return 'GET';
   if (method === 'path') return '/people/linkedin';
   if (method === 'queries') {
+    const queriesUrl = [];
+    const queries = {
+      profile: data.linkedinProfile,
+      email_type: data.emailType,
+      include_phone: data.includePhone
+    };
     for (let key in queries) {
-      if (queries[key]) queriesUrl += key + '=' + encodeUriComponent(queries[key]) + '&';
+      if (queries[key]) queriesUrl.push(key + '=' + encodeUriComponent(queries[key]));
     }
-    return queriesUrl;
+    return '?' + queriesUrl.join('&');
   }
   if (method === 'body') return undefined;
 }
@@ -761,29 +766,27 @@ function emailVerifierHandler(method) {
   const email = data.email;
   if (method === 'requestMethod') return 'GET';
   if (method === 'path') return '/email/verify';
-  if (method === 'queries') return '?' + 'email=' + encodeUriComponent(email);
+  if (method === 'queries') return '?email=' + encodeUriComponent(email);
   if (method === 'body') return undefined;
 }
+
 /*==============================================================================
   Helpers
 ==============================================================================*/
 
 function handleGuardClauses(eventData) {
   const url = eventData.page_location || getRequestHeader('referer');
-
   if (url && url.lastIndexOf('https://gtm-msr.appspot.com/', 0) === 0) return true;
 
-  if (data.apiSelection === 'PeopleEnrich') {
-    if (!data.peopleEnrichPrimaryParameters && !data.peopleEnrichNameParameters) {
-      log({
-        Name: 'ContactoutLookup',
-        Type: 'Message',
-        EventName: 'PeopleEnrich',
-        Message: 'Request failed or timed out.',
-        Reason: 'Wrong combination of required parameters for People Enrich API Lookup'
-      });
-      return true;
-    }
+  if (data.apiSelection === 'PeopleEnrich' && !data.peopleEnrichPrimaryParameters && !data.peopleEnrichNameParameters) {
+    log({
+      Name: 'ContactOutLookup',
+      Type: 'Message',
+      EventName: data.apiSelection,
+      Message: 'Request was not sent.',
+      Reason: 'Wrong combination of required parameters for People Enrich API Lookup'
+    });
+    return true;
   }
 }
 
@@ -1046,7 +1049,19 @@ ___SERVER_PERMISSIONS___
           "key": "allowedUrls",
           "value": {
             "type": 1,
-            "string": "any"
+            "string": "specific"
+          }
+        },
+        {
+          "key": "urls",
+          "value": {
+            "type": 2,
+            "listItem": [
+              {
+                "type": 1,
+                "string": "https://api.contactout.com/*"
+              }
+            ]
           }
         }
       ]
