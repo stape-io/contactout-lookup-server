@@ -110,7 +110,7 @@ ___TEMPLATE_PARAMETERS___
         "enablingConditions": [
           {
             "paramName": "apiSelection",
-            "paramValue": "email_verifier",
+            "paramValue": "EmailVerifier",
             "type": "NOT_EQUALS"
           }
         ],
@@ -132,7 +132,8 @@ ___TEMPLATE_PARAMETERS___
                 "type": "NON_EMPTY"
               }
             ],
-            "help": ""
+            "help": "",
+            "valueHint": "foo.0.bar, email, work_email.0"
           },
           {
             "type": "RADIO",
@@ -171,6 +172,11 @@ ___TEMPLATE_PARAMETERS___
     "groupStyle": "NO_ZIPPY",
     "subParams": [
       {
+        "type": "LABEL",
+        "name": "helpContactInfoSingle",
+        "displayName": "Returns a user data object from a LinkedIn profile as specified in the  \u003ca href\u003d\"https://api.contactout.com/#contact-info-api-single\"\u003e documentation \u003c/a\u003e.\u003c/br\u003e"
+      },
+      {
         "type": "TEXT",
         "name": "linkedinProfile",
         "displayName": "Linkedin Profile",
@@ -203,16 +209,13 @@ ___TEMPLATE_PARAMETERS___
             "displayValue": "Work Email"
           },
           {
-            "value": "personal,work",
-            "displayValue": "Both Personal and Work Emails"
-          },
-          {
             "value": "none",
             "displayValue": "None"
           }
         ],
         "simpleValueType": true,
-        "defaultValue": "none"
+        "help": "Choose which type of e-mail address you want in the response. Defaults to both work \u003cb\u003eAND\u003c/b\u003e personal.",
+        "notSetText": "Both Personal and Work Emails"
       },
       {
         "type": "CHECKBOX",
@@ -228,8 +231,7 @@ ___TEMPLATE_PARAMETERS___
         "paramValue": "ContactInfoSingle",
         "type": "EQUALS"
       }
-    ],
-    "help": "Returns a user data object from a LinkedIn profile as specified in the  \u003ca href\u003d\"https://api.contactout.com/#contact-info-api-single\"\u003e documentation \u003c/a\u003e.\u003c/br\u003e"
+    ]
   },
   {
     "type": "GROUP",
@@ -237,6 +239,11 @@ ___TEMPLATE_PARAMETERS___
     "displayName": "Email Verifier Lookup Configuration",
     "groupStyle": "NO_ZIPPY",
     "subParams": [
+      {
+        "type": "LABEL",
+        "name": "helpEmailVerifier",
+        "displayName": "Verifies the deliverability of an email address as specified in the  \u003ca href\u003d\"https://api.contactout.com/#email-verifier-api\"\u003e documentation \u003c/a\u003e."
+      },
       {
         "type": "TEXT",
         "name": "email",
@@ -256,8 +263,7 @@ ___TEMPLATE_PARAMETERS___
         "paramValue": "EmailVerifier",
         "type": "EQUALS"
       }
-    ],
-    "help": "Verifies the deliverability of an email address as specified in the  \u003ca href\u003d\"https://api.contactout.com/#email-verifier-api\"\u003e documentation \u003c/a\u003e."
+    ]
   },
   {
     "type": "GROUP",
@@ -265,6 +271,11 @@ ___TEMPLATE_PARAMETERS___
     "displayName": "People Enrich API",
     "groupStyle": "NO_ZIPPY",
     "subParams": [
+      {
+        "type": "LABEL",
+        "name": "helpPeopleEnrich",
+        "displayName": "Returns a user data object as described in the \u003ca href\u003d\"https://api.contactout.com/#people-enrich-request-parameters\"\u003e documentation \u003c/a\u003e.\u003c/br\u003e"
+      },
       {
         "type": "SIMPLE_TABLE",
         "name": "peopleEnrichPrimaryParameters",
@@ -453,8 +464,7 @@ ___TEMPLATE_PARAMETERS___
         "paramValue": "PeopleEnrich",
         "type": "EQUALS"
       }
-    ],
-    "help": "Returns a user data object as described in the \u003ca href\u003d\"https://api.contactout.com/#people-enrich-request-parameters\"\u003e documentation \u003c/a\u003e.\u003c/br\u003e \nIn order to return a match, is required:\u003cbr\u003e\n\u003cul\u003e \n\u003cli\u003e One primary identifier (Linkedin URL, Email or Phone)\u003c/li\u003e\n\u003cb\u003eOR\u003c/b\u003e\n\u003cli\u003e A combination of \u003cb\u003eName\u003c/b\u003e and at least a secondary parameter (Company, Location, Education, etc.)\u003c/li\u003e\u003cbr\u003e\n\u003c/ul\u003e\nObs: A \u003cb\u003eName\u003c/b\u003e must be either a Full Name or a combination of First Name and Last Name."
+    ]
   },
   {
     "displayName": "Logs Settings",
@@ -572,6 +582,7 @@ const sha256Sync = require('sha256Sync');
 const Promise = require('Promise');
 const templateDataStorage = require('templateDataStorage');
 const makeInteger = require('makeInteger');
+const encodeUriComponent = require('encodeUriComponent');
 
 /*==============================================================================
   MAIN EXECUTION
@@ -597,12 +608,11 @@ return sendRequest(requestConfig, requestBody);
 
 function sendRequest(requestConfig, requestBody) {
   const chosenApi = data.apiSelection;
-  const cacheKey = sha256Sync('contactout_' + chosenApi + '_' + JSON.stringify(requestBody));
+  const cacheKey = sha256Sync('contactout_' + chosenApi + '_' + requestConfig.url + JSON.stringify(requestBody));
   const cacheKeyTimestamp = cacheKey + '_timestamp';
   const cacheExpirationTimeMillis = data.expirationTime && makeInteger(data.expirationTime) * 60 * 60 * 1000;
   const now = getTimestampMillis();
-  const keysToReturn = data.outputKeys ? data.outputKeysList.split(',') : 'fullObject';
-  let returnBody = {};
+  const keysToReturn = data.outputKeys ? data.outputKeysList.split(',') : undefined;
 
   if (data.storeResponse) {
     let cachedValues = templateDataStorage.getItemCopy(cacheKey);
@@ -614,36 +624,35 @@ function sendRequest(requestConfig, requestBody) {
         templateDataStorage.removeItem(cacheKeyTimestamp);
       }
     }
-    if (cachedValues) return Promise.create((resolve) => resolve(cachedValues));
+    if (cachedValues) return Promise.create((resolve) => resolve(JSON.parse(createReturningObject(cachedValues))));
   }
 
   log({
     Name: 'ContactoutLookup',
     Type: 'Request',
-    EventName: requestConfig.apiName + 'Api_' + 'Lookup',
+    EventName: chosenApi,
     RequestMethod: requestConfig.options.method,
     RequestUrl: requestConfig.url,
     RequestBody: requestBody
   });
-
   return sendHttpRequest(requestConfig.url, requestConfig.options, JSON.stringify(requestBody))
     .then((result) => {
       log({
         Name: 'ContactoutLookup',
         Type: 'Response',
-        EventName: requestConfig.apiName + 'Api_' + 'Lookup',
+        EventName: chosenApi,
         ResponseStatusCode: result.statusCode,
         ResponseHeaders: result.headers,
         ResponseBody: result.body
       });
 
-      if (makeString(result.statusCode) === '200' && result.body) {
+      if (result.statusCode === 200) {
+        const parsedBody = JSON.parse(result.body || '{}');
+        if (!parsedBody) return;
         if (data.storeResponse) {
-          log(result.body);
-          templateDataStorage.setItemCopy(cacheKey, result.body);
+          templateDataStorage.setItemCopy(cacheKey, parsedBody);
           templateDataStorage.setItemCopy(cacheKeyTimestamp, now);
         }
-
         return createReturningObject(result.body, keysToReturn);
       }
     })
@@ -651,7 +660,7 @@ function sendRequest(requestConfig, requestBody) {
       log({
         Name: 'ContactoutLookup',
         Type: 'Message',
-        EventName: requestConfig.apiName + 'Api_' + 'Lookup',
+        EventName: chosenApi,
         Message: 'Request failed or timed out.',
         Reason: JSON.stringify(result)
       });
@@ -660,33 +669,25 @@ function sendRequest(requestConfig, requestBody) {
 }
 
 function createReturningObject(sourceObject, keysToReturn) {
+  sourceObject = JSON.parse(sourceObject);
   let returnObject = {};
-  const isSingleKey = getType(keysToReturn) === 'array' && keysToReturn.length === 1;
 
-  if (data.apiSelection === 'email_verifier') {
-    return JSON.parse(sourceObject).data.status;
+  if (data.apiSelection === 'EmailVerifier') {
+    return sourceObject.data.status;
   }
 
-  if (keysToReturn === 'fullObject') {
-    return JSON.parse(sourceObject);
+  if (!keysToReturn) {
+    return sourceObject;
   }
 
-  if (getType(keysToReturn) === 'array' && keysToReturn.length) {
-    keysToReturn = keysToReturn.map((key) => key.trim());
-    keysToReturn.forEach((keyPath) => {
-      const splitKeyPath = keyPath.split('.');
-      const lastKeyPathNamespace = splitKeyPath[splitKeyPath.length - 1].match('^[0-9]*$') ? splitKeyPath[splitKeyPath.length - 2] : splitKeyPath[splitKeyPath.length - 1];
-
-      if (data.objectOutput === 'createFlatObject') {
-        returnObject[lastKeyPathNamespace] = extractKeyFromObject(keyPath, JSON.parse(sourceObject));
-      }
-
-      if (data.objectOutput === 'createNestedObject') {
-        returnObject = createNestedObject(returnObject, keyPath, extractKeyFromObject(keyPath, JSON.parse(sourceObject)));
-      }
-    });
+  if (getType(keysToReturn) === 'array') {
+    if (keysToReturn.length === 1) {
+      return extractKeyFromObject(keysToReturn[0], sourceObject);
+    } else if (keysToReturn.length > 1) {
+      returnObject = createNestedObject(sourceObject, keysToReturn);
+      return data.objectOutput === 'createFlatObject' ? flattenObject(returnObject) : returnObject;
+    }
   }
-  return isSingleKey ? extractKeyFromObject(keysToReturn[0], JSON.parse(sourceObject)) : returnObject;
 }
 
 function handleRequestBody(data, eventData) {
@@ -698,13 +699,9 @@ function handleRequestConfig(data, eventData) {
   const apiVersion = 'v1';
   const apiPath = apiMethodsMapping[data.apiSelection]('path');
   const apiQueries = apiMethodsMapping[data.apiSelection]('queries');
-  const apiNameMapping = {
-    PeopleEnrich: 'PEOPLE_ENRICH',
-    ContactInfoSingle: 'CONTACT_INFO_SINGLE',
-    EmailVerifier: 'EMAIL_VERIFIER'
-  };
+
   const requestConfig = {
-    apiName: apiNameMapping[data.apiSelection],
+    apiName: data.apiSelection,
     url: apiBaseUrl + apiVersion + apiPath + apiQueries,
     options: {
       headers: {
@@ -712,8 +709,7 @@ function handleRequestConfig(data, eventData) {
         Accept: 'application/json',
         token: data.apiKey
       },
-      method: apiMethodsMapping[data.apiSelection]('requestMethod'),
-      timeout: 15000
+      method: apiMethodsMapping[data.apiSelection]('requestMethod')
     }
   };
   return requestConfig;
@@ -724,37 +720,39 @@ function peopleEnrichHandler(method) {
   if (method === 'path') return '/people/enrich';
   if (method === 'queries') return '';
   if (method === 'body') {
-    const primaryParameters = data.peopleEnrichPrimaryParameters ? makeTableMap(data.peopleEnrichPrimaryParameters, 'key', 'value') : {};
-    let nameParameters = data.peopleEnrichNameParameters ? makeTableMap(data.peopleEnrichNameParameters, 'key', 'value') : {};
-    let secondaryParameters = data.peopleEnrichSecondaryParameters ? makeTableMap(data.peopleEnrichSecondaryParameters, 'key', 'value') : {};
-    let includeParameters = data.peopleEnrichIncludeParameters ? { include: Object.values(data.peopleEnrichIncludeParameters) } : [];
-    let secondaryObject = {};
+    const primaryParameters = makeTableMap(data.peopleEnrichPrimaryParameters || [], 'key', 'value') || {};
+    let nameParameters = makeTableMap(data.peopleEnrichNameParameters || [], 'key', 'value') || {};
+    let secondaryParameters = makeTableMap(data.peopleEnrichSecondaryParameters || [], 'key', 'value') || {};
+    let includeParameters = data.peopleEnrichIncludeParameters ? { include: data.peopleEnrichIncludeParameters.map((o) => o.key) } : undefined;
 
-    nameParameters = !!(nameParameters.first_name && nameParameters.last_name) === false ? {} : nameParameters;
+    nameParameters = nameParameters.first_name && nameParameters.last_name ? nameParameters : {};
 
-    Object.entries(secondaryParameters).forEach((parameter) => {
-      if (parameter[0].match('education|company|company_domain') && getType(parameter[1]) === 'string') {
-        parameter[1] = parameter[1].split(',').map((param) => param.trim());
-        secondaryObject[parameter[0]] = parameter[1];
+    Object.entries(secondaryParameters).forEach((entry) => {
+      const key = entry[0];
+      const value = entry[1];
+      if (key.match('education|company|company_domain') && getType(value) === 'string') {
+        secondaryParameters[key] = value.split(',').map((param) => param.trim());
       }
-      return secondaryObject;
     });
 
-    if (getType(includeParameters.include) === 'array') {
-      includeParameters.include = includeParameters.include.map((parameter) => parameter.key);
-    }
-    return mergeObjects(primaryParameters, nameParameters, secondaryObject, includeParameters);
+    return mergeObjects(primaryParameters, nameParameters, secondaryParameters, includeParameters);
   }
 }
 
 function contactInfoSingleHandler(method) {
-  const profile = data.linkedinProfile;
-  const emailType = data.emailType;
-  const includePhone = data.includePhone;
+  let queriesUrl = '/?';
+  const queries = {
+    profile: data.linkedinProfile,
+    email_type: data.emailType,
+    include_phone: data.includePhone
+  };
   if (method === 'requestMethod') return 'GET';
   if (method === 'path') return '/people/linkedin';
   if (method === 'queries') {
-    return '/?' + 'profile=' + profile + '&email_type=' + emailType + '&include_phone=' + includePhone;
+    for (let key in queries) {
+      if (queries[key]) queriesUrl += key + '=' + encodeUriComponent(queries[key]) + '&';
+    }
+    return queriesUrl;
   }
   if (method === 'body') return undefined;
 }
@@ -763,7 +761,7 @@ function emailVerifierHandler(method) {
   const email = data.email;
   if (method === 'requestMethod') return 'GET';
   if (method === 'path') return '/email/verify';
-  if (method === 'queries') return '?' + 'email=' + email;
+  if (method === 'queries') return '?' + 'email=' + encodeUriComponent(email);
   if (method === 'body') return undefined;
 }
 /*==============================================================================
@@ -775,9 +773,67 @@ function handleGuardClauses(eventData) {
 
   if (url && url.lastIndexOf('https://gtm-msr.appspot.com/', 0) === 0) return true;
 
-  if (data.apiSelection === 'people_enrich') {
-    if (!data.peopleEnrichPrimaryParameters && !data.peopleEnrichNameParameters) return true;
+  if (data.apiSelection === 'PeopleEnrich') {
+    if (!data.peopleEnrichPrimaryParameters && !data.peopleEnrichNameParameters) {
+      log({
+        Name: 'ContactoutLookup',
+        Type: 'Message',
+        EventName: 'PeopleEnrich',
+        Message: 'Request failed or timed out.',
+        Reason: 'Wrong combination of required parameters for People Enrich API Lookup'
+      });
+      return true;
+    }
   }
+}
+
+function flattenObject(ob) {
+  const toReturn = {};
+
+  for (let i in ob) {
+    if (!ob.hasOwnProperty(i)) continue;
+
+    if (['object', 'array'].indexOf(getType(ob[i])) !== -1) {
+      const flatObject = flattenObject(ob[i]);
+      for (let x in flatObject) {
+        if (!flatObject.hasOwnProperty(x)) continue;
+        toReturn[i + '_' + x] = flatObject[x];
+      }
+    } else {
+      toReturn[i] = ob[i];
+    }
+  }
+
+  return toReturn;
+}
+
+function createNestedObject(source, paths) {
+  const result = {};
+
+  paths.forEach((path) => {
+    const keys = path.trim().split('.');
+    let srcPtr = source;
+    let resPtr = result;
+
+    for (let i = 0; i < keys.length; i++) {
+      const key = keys[i];
+
+      if (!srcPtr || !srcPtr[key]) return;
+
+      const isLastKey = i === keys.length - 1;
+      if (isLastKey) {
+        resPtr[key] = srcPtr[key];
+      } else {
+        if (getType(resPtr[key]) === 'undefined') {
+          resPtr[key] = getType(srcPtr[key]) === 'array' ? [] : {};
+        }
+        srcPtr = srcPtr[key];
+        resPtr = resPtr[key];
+      }
+    }
+  });
+
+  return result;
 }
 
 function extractKeyFromObject(keyPath, sourceObject) {
@@ -801,55 +857,6 @@ function mergeObjects() {
     });
   }
   return objectToReturn;
-}
-
-function createNestedObject(obj, path, value) {
-  const parts = path.split('.');
-  let current = obj;
-
-  for (let i = 0; i < parts.length; i++) {
-    const part = parts[i];
-    const isArrayIndex = part.match('^[0-9]+$');
-    const key = isArrayIndex ? makeInteger(part) : part;
-
-    if (i === parts.length - 1) {
-      current[key] = value;
-      break;
-    }
-
-    if (isArrayIndex) {
-      let nextStructure = current[key];
-
-      if (!nextStructure) {
-        const nextPart = parts[i + 1];
-        const isNextArrayIndex = nextPart.match('^[0-9]+$');
-
-        if (isNextArrayIndex) {
-          nextStructure = [];
-        } else {
-          nextStructure = {};
-        }
-        current[key] = nextStructure;
-      }
-
-      current = current[key];
-      continue;
-    }
-
-    if (!current[key] || typeof current[key] !== 'object') {
-      const nextPart = parts[i + 1];
-      const isNextArrayIndex = nextPart.match('^[0-9]+$');
-
-      if (isArrayIndex || isNextArrayIndex) {
-        current[key] = [];
-      } else {
-        current[key] = {};
-      }
-    }
-    current = current[key];
-  }
-
-  return obj;
 }
 
 function log(rawDataToLog) {
@@ -987,7 +994,7 @@ ___SERVER_PERMISSIONS___
           "key": "environments",
           "value": {
             "type": 1,
-            "string": "debug"
+            "string": "all"
           }
         }
       ]
@@ -1125,26 +1132,12 @@ ___SERVER_PERMISSIONS___
 
 ___TESTS___
 
-scenarios:
-- name: Untitled test 1
-  code: |
-    const mockData = {
-      // Mocked field values
-    };
-
-    // Call runCode to run the template's code.
-    let variableResult = runCode(mockContactInfoSingleAPISingleValue);
-setup: |-
-  const mockContactInfoSingleAPISingleValue = {
-    apiSelection: 'contact_info_single',
-    apiKey: 'PhlELrnhBr0rDNed5xwFGvTr',
-    linkedinProfile: 'https://www.linkedin.com/in/jane-doe-18951158',
-    outputKeysList: "profile.url"
-  };
+scenarios: []
+setup: ''
 
 
 ___NOTES___
 
-Created on 20/11/2025, 11:28:11
+Created on 01/12/2025, 09:40:50
 
 
