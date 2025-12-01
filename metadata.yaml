@@ -1,5 +1,5 @@
 homepage: 'https://stape.io/'
 documentation: 'https://github.com/stape-io/contactout-lookup-server'
 versions:
-  - sha: 9d96e77228e6b7a510484bdb66fd0a33861c8e0a
+  - sha: e96df1c9187a4451fe59d7920d358677fcdf4303
     changeNotes: Initial Release.
