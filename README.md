@@ -1,7 +1,7 @@
 # ContactOut Lookup Variable for Google Tag Manager Server Container
 
 
-This Google Tag Manager Server-Side variable allows you to retrieve contact information using the Contactout API. It supports enriching user profiles, verifying emails, and retrieving contact details via LinkedIn URLs.
+This Google Tag Manager Server-Side variable allows you to retrieve contact information using the ContacOut API. It supports enriching user profiles, verifying emails, and retrieving contact details via LinkedIn URLs.
 
 ## Features
 
@@ -14,8 +14,8 @@ This Google Tag Manager Server-Side variable allows you to retrieve contact info
 
 ### 1. API Lookup Configuration
 
-- **Choose Contactout API**: Select the specific endpoint you wish to use.
-- **API Key**: Enter your Contactout API Key found in your API Dashboard.
+- **Choose ContactOut API**: Select the specific endpoint you wish to use.
+- **API Key**: Enter your ContactOut API Key found in your API Dashboard.
 - **Store response in cache**: Enable to cache results. You can define the **Cache Expiration Time** (in hours).
 - **Extract keys**: Option to parse the JSON response and return specific values (supports dot notation like `foo.bar`).
 
@@ -62,4 +62,4 @@ This template requires the following permissions:
 
 ## Open Source
 
-The **Contactout Lookup Variable by Stape** is developed and maintained by the [Stape Team](https://stape.io/) under the Apache 2.0 license.
+The **ContactOut Lookup Variable by Stape** is developed and maintained by the [Stape Team](https://stape.io/) under the Apache 2.0 license.
