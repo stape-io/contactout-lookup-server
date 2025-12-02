@@ -15,7 +15,7 @@ ___INFO___
   "securityGroups": [],
   "displayName": "ContactOut Lookup Variable",
   "categories": [
-    "DATA_WAREHOUSING"
+    "DATA_WAREHOUSING",
     "SALES",
     "UTILITY"
   ],
